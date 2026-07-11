@@ -1,14 +1,20 @@
 # ---------------------------------------------------------
 # 1. IMPORTS & SETUP
 # ---------------------------------------------------------
-from dotenv import load_dotenv
-load_dotenv()  # This loads the variables from your .env file!
-
 import os        # Lets Python read your computer's environment variables (like PORT)
 import base64    # Used to decode the text-based image back into raw binary file data
 import json      # Used to parse structured JSON returned by Gemini
 import sys       # Lets us modify how Python looks for other files in your project
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+backend_env = Path(__file__).resolve().parent / ".env"
+root_env = ROOT_DIR / ".env"
+for dotenv_path, override in ((backend_env, True), (root_env, False)):
+    if dotenv_path.exists():
+        load_dotenv(dotenv_path=dotenv_path, override=override)
 
 from flask import Flask, request, jsonify  # The core tools to build a web server
 from flask_cors import CORS                # The security bouncer that lets React in
@@ -106,13 +112,27 @@ def describe_image():
 
     # 6. AI Execution: Pass the raw bytes to your custom Gemini function.
     # The code will pause on this line and wait for Google's servers to respond.
-    analysis_payload = describe_image_bytes(
-        image_bytes,
-        mime_type=mime_type,
-        address=address,
-        monthly_electric_bill=monthly_electric_bill,
-        context_values=context_values,
-    )
+    try:
+        analysis_payload = describe_image_bytes(
+            image_bytes,
+            mime_type=mime_type,
+            address=address,
+            monthly_electric_bill=monthly_electric_bill,
+            context_values=context_values,
+        )
+    except Exception as exc:
+        print("=== GEMINI IMAGE ANALYSIS FAILED ===")
+        print(exc)
+        analysis_payload = {
+            "description": "AI image analysis is temporarily unavailable.",
+            "analysis": {
+                "roof_material": None,
+                "roof_quality": None,
+                "roof_tilting": None,
+                "obstructions": [],
+            },
+            "context_values": {},
+        }
 
     # 7. Parse the image-analysis JSON and save it into the solar context.
     if isinstance(analysis_payload, dict):
@@ -140,7 +160,13 @@ def describe_image():
     solar_context.set_value("ai_image_analysis", analysis)
 
     # 8. Ask Gemini for the likely current electricity price for the provided address.
-    estimated_energy_price = get_estimated_energy_price(address)
+    try:
+        estimated_energy_price = get_estimated_energy_price(address)
+    except Exception as exc:
+        print("=== ENERGY PRICE LOOKUP FAILED ===")
+        print(exc)
+        estimated_energy_price = 0.16
+
     solar_context.set_value("energy_price", {"estimated_price": estimated_energy_price})
     print("=== ENERGY PRICE DEBUG ===")
     print(estimated_energy_price)
@@ -158,13 +184,25 @@ def describe_image():
     print(ai_summary)
 
     # 10. Ask Gemini to evaluate the full solar context and return the score/reasoning.
-    score, reasoning = evaluate_and_split_solar_data(ai_summary)
+    try:
+        score, reasoning = evaluate_and_split_solar_data(ai_summary)
+    except Exception as exc:
+        print("=== SOLAR EVALUATION FAILED ===")
+        print(exc)
+        score, reasoning = 50, "AI evaluation is temporarily unavailable, so a neutral score was used."
+
     solar_context.set_value("compatibility_score", {"score": score})
     print(f"=== COMPATIBILITY SCORE DEBUG ===")
     print(f"score={score}")
     print(f"reasoning={reasoning}")
 
-    next_steps = generate_next_steps_for_solar_context(ai_summary, score)
+    try:
+        next_steps = generate_next_steps_for_solar_context(ai_summary, score)
+    except Exception as exc:
+        print("=== NEXT STEPS GENERATION FAILED ===")
+        print(exc)
+        next_steps = "AI guidance is temporarily unavailable. Please review your solar options with a local installer."
+
     print("=== NEXT STEPS DEBUG ===")
     print(next_steps)
 

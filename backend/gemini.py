@@ -7,6 +7,9 @@ from __future__ import annotations
 
 import json  # Used to parse JSON strings from the Gemini API into Python dictionaries
 import os  # Used to look up environment variables from your operating system
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 # The official Google GenAI library. 'genai' contains the core client tools,
 # and 'types' provides rigid data structures required by Google's API.
@@ -14,6 +17,23 @@ from google import genai
 from google.genai import types
 
 from solar_brain import ALLOWED_CONTEXT_FIELDS, normalize_context_payload
+
+
+def _get_gemini_api_key() -> str:
+    """Load the Gemini API key from the workspace .env file or the current environment."""
+    repo_root = Path(__file__).resolve().parent.parent
+    backend_env = Path(__file__).resolve().parent / ".env"
+    root_env = repo_root / ".env"
+    for dotenv_path, override in ((backend_env, True), (root_env, False)):
+        if dotenv_path.exists():
+            load_dotenv(dotenv_path=dotenv_path, override=override)
+
+    return (
+        os.environ.get("GEMINI_API_KEY")
+        or os.environ.get("GOOGLE_API_KEY")
+        or os.environ.get("GOOGLE_GENAI_API_KEY")
+        or ""
+    ).strip()
 
 
 def parse_context_response(text: str | None) -> dict:
@@ -55,8 +75,8 @@ def describe_image_bytes(
 
     # This searches your computer for a variable named 'GEMINI_API_KEY'.
     # If it can't find one, it falls back to the hardcoded string provided as the second argument.
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-    print(f"Using GEMINI_API_KEY: {api_key[:4]}...{api_key[-4:]}")  # Only show the first and last 4 chars for safety
+    api_key = _get_gemini_api_key()
+    print(f"Using GEMINI_API_KEY: {api_key[:4]}...{api_key[-4:]}" if api_key else "Using GEMINI_API_KEY: <missing>")  # Only show the first and last 4 chars for safety
 
     # Safety check: If both the system variable and the fallback are missing, halt execution.
     if not api_key:
@@ -156,7 +176,7 @@ def describe_image_bytes(
 def evaluate_and_split_solar_data(ai_summary: str) -> tuple[int, str]:
     """Analyze compiled property summary data and return (score, reasoning)."""
     
-    api_key = os.environ.get("GEMINI_API_KEY", "")
+    api_key = _get_gemini_api_key()
     if not api_key:
         raise RuntimeError(
             "Missing GEMINI_API_KEY env var. Set it before running the backend."
@@ -224,7 +244,7 @@ TONE & STYLE INSTRUCTIONS:
 def get_estimated_energy_price(address: str | None) -> float:
     """Estimate the likely current energy price for the provided address in dollars per kWh."""
 
-    api_key = os.environ.get("GEMINI_API_KEY", "")
+    api_key = _get_gemini_api_key()
     if not api_key:
         raise RuntimeError(
             "Missing GEMINI_API_KEY env var. Set it before running the backend."
@@ -261,7 +281,7 @@ def get_estimated_energy_price(address: str | None) -> float:
 def generate_next_steps_for_solar_context(ai_summary: str, compatibility_score: int) -> str:
     """Return practical next-step guidance based on the solar compatibility score."""
 
-    api_key = os.environ.get("GEMINI_API_KEY", "")
+    api_key = _get_gemini_api_key()
     if not api_key:
         raise RuntimeError(
             "Missing GEMINI_API_KEY env var. Set it before running the backend."
