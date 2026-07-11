@@ -76,6 +76,17 @@ body {
   font-family: var(--sans);
 }
 
+@keyframes riseUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -129,6 +140,12 @@ code {
     radial-gradient(circle at top left, rgba(251, 191, 36, 0.24), transparent 28%),
     radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.2), transparent 30%),
     linear-gradient(135deg, #020617 0%, #0f172a 50%, #111827 100%);
+}
+
+.site-header,
+.card,
+.container {
+  animation: riseUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 .card {

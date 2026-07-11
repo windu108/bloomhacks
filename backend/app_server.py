@@ -7,18 +7,18 @@ load_dotenv()  # This loads the variables from your .env file!
 import os        # Lets Python read your computer's environment variables (like PORT)
 import base64    # Used to decode the text-based image back into raw binary file data
 import sys       # Lets us modify how Python looks for other files in your project
+from pathlib import Path
 
 from flask import Flask, request, jsonify  # The core tools to build a web server
 from flask_cors import CORS                # The security bouncer that lets React in
 
-# Python usually only looks for imports in the exact folder this script is running from.
-# Because your 'gemini.py' is inside an 'app/' folder, we append your master project 
-# path to Python's system path so it knows exactly where to find it.
-sys.path.append("/Users/ethanwood/Desktop/BloomKnights/BloomTest")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.append(str(PROJECT_ROOT))
+sys.path.append(str(Path(__file__).resolve().parent))
 
 # Now that Python knows where to look, we can import your custom Gemini function
 from gemini import describe_image_bytes
-from solar_brain import save_user_inputs
+from solar_brain import ALLOWED_CONTEXT_FIELDS, normalize_context_payload, save_user_inputs, solar_context
 
 # Initialize the Flask application. '__name__' just tells Flask where this file lives.
 app = Flask(__name__)
@@ -55,6 +55,7 @@ def describe_image():
     mime_type = data.get("mime_type")  # Will be None if React didn't provide it
     address = data.get("address")
     monthly_electric_bill = data.get("monthly_electric_bill")
+    context_values = normalize_context_payload(data.get("context_values") or {})
 
     # 3. Validation: If the request didn't include the image data, stop immediately.
     # Return a 400 Bad Request HTTP status code so the frontend knows it messed up.
@@ -72,20 +73,45 @@ def describe_image():
     # 5. Save the optional user context to the solar brain helper.
     save_user_inputs(address, monthly_electric_bill)
 
+    if context_values:
+        if context_values.get("address") is not None:
+            solar_context.set_value("user_inputs", {"address": context_values.get("address")})
+        if context_values.get("monthly_electric_bill") is not None:
+            solar_context.set_value("user_inputs", {"monthly_electric_bill": context_values.get("monthly_electric_bill")})
+
+        ai_analysis_updates = {}
+        for field in ["roof_material", "roof_quality", "roof_tilting", "obstructions", "surface_area", "sunlight_hours", "sunlight_intensity"]:
+            if context_values.get(field) is not None:
+                ai_analysis_updates[field] = context_values.get(field)
+
+        if ai_analysis_updates:
+            solar_context.set_value("ai_image_analysis", ai_analysis_updates)
+
     # 6. AI Execution: Pass the raw bytes to your custom Gemini function.
     # The code will pause on this line and wait for Google's servers to respond.
-    description = describe_image_bytes(
+    analysis = describe_image_bytes(
         image_bytes,
         mime_type=mime_type,
         address=address,
         monthly_electric_bill=monthly_electric_bill,
+        context_values=context_values,
     )
+
+    if isinstance(analysis, dict):
+        description = analysis.get("description", "")
+        context_values_out = analysis.get("context_values", {})
+    else:
+        description = str(analysis or "")
+        context_values_out = {}
     
     # 7. Logging: Print the AI's response to this terminal so you can read it instantly.
     print(description)
 
     # 8. Response: Package the text into a JSON object and ship it back to React.
-    return jsonify({"description": description})
+    return jsonify({
+        "description": description,
+        "context_values": context_values_out,
+    })
 
 
 # ---------------------------------------------------------

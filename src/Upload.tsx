@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import sun from "./assets/sun.png";
 import "./Upload.css";
@@ -12,6 +12,30 @@ interface LocationState {
   electricBill?: string;
 }
 
+interface ContextValues {
+  address?: string | null;
+  monthly_electric_bill?: string | null;
+  roof_material?: string | null;
+  roof_quality?: string | null;
+  roof_tilting?: string | null;
+  obstructions?: string | null;
+  surface_area?: string | null;
+  sunlight_hours?: string | null;
+  sunlight_intensity?: string | null;
+}
+
+const contextFieldLabels: Record<keyof ContextValues, string> = {
+  address: "Address",
+  monthly_electric_bill: "Energy consumption",
+  roof_material: "Roof material",
+  roof_quality: "Roof quality",
+  roof_tilting: "Roof tilting",
+  obstructions: "Obstructions",
+  surface_area: "Surface area",
+  sunlight_hours: "Sunlight hours",
+  sunlight_intensity: "Sunlight intensity",
+};
+
 function Upload() {
   // Use a TypeScript type assertion ('as') to tell the router to expect our specific state interface
   const location = useLocation() as { state: LocationState | null };
@@ -24,6 +48,12 @@ function Upload() {
   const [description, setDescription] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showContextEditor, setShowContextEditor] = useState(false);
+  const [contextValues, setContextValues] = useState<ContextValues>({
+    address: address || null,
+    monthly_electric_bill: electricBill || null,
+  });
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   // Effect 1: Handle Object URL creation and memory cleanup
   useEffect(() => {
@@ -36,73 +66,85 @@ function Upload() {
     return () => URL.revokeObjectURL(url);
   }, [image]);
 
-  // Effect 2: Convert file to base64 and hit your Flask server
-  useEffect(() => {
+  const analyzeImage = async () => {
     if (!image) return;
 
-    const run = async () => {
-      setError("");
-      setDescription("");
+    setError("");
+    setDescription("");
+    setIsRegenerating(true);
 
-      try {
-        // 3. Strongly typed Base64 converter. 
-        // It accepts a 'File' and promises to eventually resolve into a 'string'.
-        const toBase64 = (file: File): Promise<string> => {
-          return new Promise((resolve, reject) => {
-            const reader = new FileReader();
+    try {
+      // 3. Strongly typed Base64 converter.
+      //Accepts a 'File' and promises to eventually resolve into a 'string'
+      const toBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
 
-            reader.readAsDataURL(file);
+          reader.readAsDataURL(file);
 
-            reader.onload = () => {
-              if (typeof reader.result === "string") {
-                // Split off the metadata prefix (e.g., "data:image/png;base64,")
-                resolve(reader.result.split(',')[1]);
-              } else {
-                reject(new Error("Failed to process image file layout."));
-              }
-            };
+          reader.onload = () => {
+            if (typeof reader.result === "string") {
+              //Split off the metadata prefix (e.g., "data:image/jpeg;base64,") and return just the Base64 string
+              resolve(reader.result.split(',')[1]);
+            } else {
+              reject(new Error("Failed to process image file layout."));
+            }
+          };
 
-            reader.onerror = (err) => reject(err);
-          });
-        };
-
-        const imageB64: string = await toBase64(image);
-
-        // 4. Send the payload to your Flask server (running on port 5001)
-        const res = await fetch("http://localhost:5001/api/describe-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            image_b64: imageB64,
-            mime_type: image.type || "image/jpeg", // Safely fallback to jpeg if type is missing
-            address,
-            monthly_electric_bill: electricBill,
-          }),
+          reader.onerror = (err) => reject(err);
         });
+      };
 
-        // Error checking the HTTP response status
-        if (!res.ok) {
-          const msg: string = await res.text();
-          throw new Error(msg || `Request failed: ${res.status}`);
-        }
+      const imageB64: string = await toBase64(image);
+      const res = await fetch("http://localhost:5001/api/describe-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_b64: imageB64,
+          mime_type: image.type || "image/jpeg",
+          address: contextValues.address || address,
+          monthly_electric_bill: contextValues.monthly_electric_bill || electricBill,
+          context_values: contextValues,
+        }),
+      });
 
-        // 5. Explicitly type cast the incoming JSON structure from Flask
-        const json = (await res.json()) as { description?: string };
-        setDescription(json.description || "");
-
-      } catch (e: unknown) {
-        // TypeScript enforces that errors caught in a try/catch are typed as 'unknown' 
-        // because anything can technically be thrown in JavaScript. We safely extract the message here:
-        if (e instanceof Error) {
-          setError(e.message);
-        } else {
-          setError(String(e));
-        }
+      if (!res.ok) {
+        const msg: string = await res.text();
+        throw new Error(msg || `Request failed: ${res.status}`);
       }
-    };
 
-    run();
+      const json = (await res.json()) as { description?: string; context_values?: ContextValues };
+      setDescription(json.description || "");
+
+      if (json.context_values) {
+        setContextValues((current) => ({ ...current, ...json.context_values }));
+      }
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError(String(e));
+      }
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!image) return;
+    analyzeImage();
   }, [image]);
+
+  const contextFields = useMemo(() => Object.keys(contextFieldLabels) as Array<keyof ContextValues>, []);
+
+  const updateContextField = (field: keyof ContextValues, value: string) => {
+    setContextValues((current) => ({ ...current, [field]: value }));
+  };
+
+  const populatedContextPreview = contextFields.filter((field) => {
+    const value = contextValues[field];
+    return typeof value === "string" && value.trim().length > 0;
+  });
 
   return (
     <div className="page">
@@ -118,7 +160,6 @@ function Upload() {
 
       <div className="container">
         <div className="insight">✨ Analysis complete</div>
-        <h1>Upload Complete!</h1>
 
         {image ? (
           <div className="result-shell">
@@ -151,6 +192,44 @@ function Upload() {
                 ) : (
                   <p className="loading-text">Loading description from Gemini...</p>
                 )}
+              </div>
+
+              <div className="context-panel">
+                <button className="context-toggle" onClick={() => setShowContextEditor((value) => !value)}>
+                  {showContextEditor ? "Hide values" : "Change Values"}
+                </button>
+
+                {showContextEditor ? (
+                  <div className="context-editor">
+                    {populatedContextPreview.length > 0 ? (
+                      <div className="context-preview">
+                        <p className="section-label">Current values</p>
+                        <ul>
+                          {populatedContextPreview.map((field) => (
+                            <li key={field}>
+                              <strong>{contextFieldLabels[field]}:</strong> {contextValues[field]}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+
+                    {contextFields.map((field) => (
+                      <label key={field} className="context-field">
+                        <span>{contextFieldLabels[field]}</span>
+                        <input
+                          value={contextValues[field] ?? ""}
+                          onChange={(event) => updateContextField(field, event.target.value)}
+                          placeholder="Not provided"
+                        />
+                      </label>
+                    ))}
+
+                    <button className="regenerate-button" onClick={analyzeImage} disabled={isRegenerating}>
+                      {isRegenerating ? "Regenerating..." : "Regenerate"}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

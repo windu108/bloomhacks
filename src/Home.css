@@ -61,6 +61,8 @@
   font-size: 1rem;
   line-height: 1.6;
   margin-top: 50px;
+  animation: riseUp 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 0.1s;
 }
 
 .upload-zone {
@@ -76,6 +78,8 @@
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
   cursor: pointer;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  animation: riseUp 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 0.15s;
 }
 
 .upload-zone:hover,
@@ -124,6 +128,8 @@
   background: rgba(15, 23, 42, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--muted);
+  animation: riseUp 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 0.2s;
 }
 
 .selected-pill strong {
@@ -140,6 +146,8 @@
   cursor: pointer;
   box-shadow: 0 14px 32px rgba(249, 115, 22, 0.28);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: riseUp 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 0.3s;
 }
 
 .primary-button:hover {
@@ -152,6 +160,8 @@
   gap: 12px;
   margin-bottom: 18px;
   text-align: left;
+  animation: riseUp 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: 0.25s;
 }
 
 .field {

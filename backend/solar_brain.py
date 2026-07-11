@@ -1,5 +1,39 @@
 from __future__ import annotations
 
+ALLOWED_CONTEXT_FIELDS = {
+    "address": "Address",
+    "monthly_electric_bill": "Energy consumption",
+    "roof_material": "Roof material",
+    "roof_quality": "Roof quality",
+    "roof_tilting": "Roof tilting",
+    "obstructions": "Obstructions",
+    "surface_area": "Surface area",
+    "sunlight_hours": "Sunlight hours",
+    "sunlight_intensity": "Sunlight intensity",
+}
+
+
+def normalize_context_payload(payload: dict | None) -> dict:
+    """Normalize incoming context values into simple strings or None values."""
+    normalized: dict[str, object] = {}
+
+    for key in ALLOWED_CONTEXT_FIELDS:
+        value = (payload or {}).get(key)
+        if value is None:
+            normalized[key] = None
+            continue
+
+        if isinstance(value, list):
+            text = ", ".join(str(item).strip() for item in value if str(item).strip())
+            normalized[key] = text or None
+        elif isinstance(value, str):
+            normalized[key] = value.strip() or None
+        else:
+            normalized[key] = str(value).strip() or None
+
+    return normalized
+
+
 class SolarContext:
     def __init__(self):
         # This dictionary will hold all the factors that influence solar panel compatibility score.

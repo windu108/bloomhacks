@@ -118,22 +118,86 @@
   gap: 12px;
 }
 
-.context-card {
-  width: 100%;
-  padding: 16px 18px;
-  border-radius: 18px;
+.context-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.context-toggle,
+.regenerate-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--sun), var(--sun-hot));
+  color: #111827;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.context-toggle:hover,
+.regenerate-button:hover {
+  transform: translateY(-1px);
+}
+
+.regenerate-button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.context-editor {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
   background: rgba(15, 23, 42, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.context-preview {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.94);
+  color: #0f172a;
   text-align: left;
 }
 
-.context-card p {
-  margin: 6px 0 0;
-  color: var(--muted);
+.context-preview p {
+  margin: 0 0 6px;
 }
 
-.context-card strong {
+.context-preview ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+
+.context-preview li {
+  color: #334155;
+}
+
+.context-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  text-align: left;
+}
+
+.context-field input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.55);
   color: var(--text);
+}
+
+.context-field input::placeholder {
+  color: rgba(148, 163, 184, 0.8);
 }
 
 .description-block,

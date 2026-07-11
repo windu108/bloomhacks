@@ -5,12 +5,36 @@
 # allowing us to use clean syntax like 'str | None' even on slightly older Python versions.
 from __future__ import annotations 
 
+import json
 import os  # Used to look up environment variables from your operating system
 
 # The official Google GenAI library. 'genai' contains the core client tools,
 # and 'types' provides rigid data structures required by Google's API.
 from google import genai
-from google.genai import types  
+from google.genai import types
+
+from solar_brain import ALLOWED_CONTEXT_FIELDS, normalize_context_payload
+
+
+def parse_context_response(text: str | None) -> dict:
+    """Parse Gemini's JSON response into a context dictionary."""
+    if not text:
+        return {}
+
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.strip("`")
+        if cleaned.startswith("json"):
+            cleaned = cleaned[4:].strip()
+
+    try:
+        parsed = json.loads(cleaned)
+        if isinstance(parsed, dict):
+            return normalize_context_payload(parsed)
+    except (TypeError, json.JSONDecodeError):
+        pass
+
+    return {}
 
 
 # ---------------------------------------------------------
@@ -18,9 +42,16 @@ from google.genai import types
 # ---------------------------------------------------------
 # This function expects 'image_bytes' (raw binary data). 
 # The '*' forces 'mime_type' to be a named argument when called, preventing typos.
-# '-> str' tells anyone reading the code that this function promises to return text.
-def describe_image_bytes(image_bytes: bytes, *, mime_type: str | None = None, address: str | None = None, monthly_electric_bill: str | None = None,) -> str:
-    """Describe an image using Gemini and return the text."""
+# '-> dict' tells anyone reading the code that this function promises to return a structured analysis.
+def describe_image_bytes(
+    image_bytes: bytes,
+    *,
+    mime_type: str | None = None,
+    address: str | None = None,
+    monthly_electric_bill: str | None = None,
+    context_values: dict | None = None,
+) -> dict:
+    """Describe an image using Gemini and return the text plus editable context values."""
 
     # This searches your computer for a variable named 'GEMINI_API_KEY'.
     # If it can't find one, it falls back to the hardcoded string provided as the second argument.
@@ -42,7 +73,11 @@ def describe_image_bytes(image_bytes: bytes, *, mime_type: str | None = None, ad
     # ---------------------------------------------------------
     # 3. TALKING TO THE AI MODEL
     # ---------------------------------------------------------
-    prompt_parts = ["Describe this image in a few sentences. Focus on what is shown."]
+    prompt_parts = [
+        "Describe this image in a few sentences. Focus on what is shown. If possible, also return a JSON object with a 'description' field and the following context keys: "
+        + ", ".join(ALLOWED_CONTEXT_FIELDS.keys())
+        + "."
+    ]
     if address:
         prompt_parts.append(f"User address: {address}.")
     if monthly_electric_bill:
@@ -67,7 +102,15 @@ def describe_image_bytes(image_bytes: bytes, *, mime_type: str | None = None, ad
 
     # The 'response' object contains metadata (like safety flags and tokens used).
     # We drill down specifically into '.text' to extract just the AI's written words.
-    return response.text
+    raw_text = getattr(response, "text", None) or ""
+    parsed_context = parse_context_response(raw_text)
+    description = parsed_context.pop("description", None) or raw_text or ""
+    context_values_out = {key: parsed_context.get(key) for key in ALLOWED_CONTEXT_FIELDS}
+
+    return {
+        "description": description,
+        "context_values": context_values_out,
+    }
 
 
 # ---------------------------------------------------------

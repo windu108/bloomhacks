@@ -85,7 +85,6 @@ function Home() {
             <img src={sun} alt="Sun" className="sun-image" />
           </div>
         </div>*/}
-        <div className="insight">✨ AI image insight</div>
         <h1 style={{ marginTop: "25px" }}>Upload an Image</h1>
         <p className="subtitle">
           Drop a photo of your house facing forward and we will use it to determine solar-compatability.
