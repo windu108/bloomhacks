@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import sun from "./assets/sun.png";
 import "./Upload.css";
 import "./index.css";
+import SolarDashboard1 from "./SolarDashboard1.jsx";
 
 // 1. Define an interface for what we expect to find inside React Router's memory state.
 interface LocationState {
@@ -188,6 +189,9 @@ function Upload() {
         </div>
       </header>
 
+      <main style={{ padding: '20px' }}>
+        <SolarDashboard1 />
+      </main>
       <div className="container">
         <div className="insight">✨ Analysis complete</div>
 
