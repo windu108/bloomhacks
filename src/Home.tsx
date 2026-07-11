@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import sun from "./assets/sun.png";
 import "./Home.css";
 
 function Home() {
@@ -24,6 +25,16 @@ function Home() {
 
   return (
     <div className="page">
+      <header className="site-header">
+        <div className="brand-block">
+          <img src={sun} alt="SimplySolar logo" className="brand-logo" />
+          <div>
+            <h2 className="brand-title">SimplySolar</h2>
+            <p className="brand-subtitle">Your guide to navigating the complex solar industry</p>
+          </div>
+        </div>
+      </header>
+
       <div className="card">
         {/*<input type="range" min="0" max="100" value={percent} onChange={(e) => setPercent(e.target.value)} />
         
@@ -33,7 +44,7 @@ function Home() {
           </div>
         </div>*/}
         <div className="insight">✨ AI image insight</div>
-        <h1>Upload an Image</h1>
+        <h1 style={{ marginTop: "25px" }}>Upload an Image</h1>
         <p className="subtitle">
           Drop a photo and let the experience turn it into something beautifully explained.
         </p>
@@ -42,7 +53,7 @@ function Home() {
           <span className="upload-icon">⬆</span>
           <span className="upload-title">{image ? "Image ready to analyze" : "Choose an image"}</span>
           <span className="upload-subtitle">
-            {image ? image.name : "PNG, JPG, or WEBP • cozy and polished"}
+            {image ? image.name : "PNG, JPG, or WEBP"}
           </span>
           <input id="image-upload" type="file" accept="image/*" onChange={handleImageChange} />
         </label>

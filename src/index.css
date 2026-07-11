@@ -120,8 +120,10 @@ code {
 .page {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 20px;
   padding: 24px;
   background:
     radial-gradient(circle at top left, rgba(251, 191, 36, 0.24), transparent 28%),
