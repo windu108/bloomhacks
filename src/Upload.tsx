@@ -8,12 +8,17 @@ import "./index.css"
 // This tells TypeScript that 'location.state' might contain an 'image' which is a standard web File object.
 interface LocationState {
   image?: File;
+  address?: string;
+  electricBill?: string;
 }
 
 function Upload() {
   // Use a TypeScript type assertion ('as') to tell the router to expect our specific state interface
   const location = useLocation() as { state: LocationState | null };
   const image = location.state?.image;
+  const address = location.state?.address ?? "";
+  const electricBill = location.state?.electricBill ?? "";
+  const scanProgress = 55;
 
   // 2. Strongly type your state variables
   const [description, setDescription] = useState<string>("");
@@ -70,6 +75,8 @@ function Upload() {
           body: JSON.stringify({
             image_b64: imageB64,
             mime_type: image.type || "image/jpeg", // Safely fallback to jpeg if type is missing
+            address,
+            monthly_electric_bill: electricBill,
           }),
         });
 
@@ -99,43 +106,58 @@ function Upload() {
 
   return (
     <div className="page">
-    <div className="container" style={{ padding: "20px", fontFamily: "sans-serif" }}>
-      <h1>Upload Complete!</h1>
+      <div className="container">
+        <div className="hero-badge">✨ Analysis complete</div>
+        <h1>Upload Complete!</h1>
 
-      {image ? (
-        <>
-          <p>Your image:</p>
-          {previewUrl && (
-            <img
-              src={previewUrl}
-              alt="Uploaded preview"
-              style={{ width: "300px", borderRadius: "8px", display: "block", marginBottom: "15px" }}
-            />
-          )}
-          <hr />
-          <div>
-            <div className="sun-bar">
-              <div className="sunlight" style={{width: `${55}%`}}/>
-              <img src={sun} alt="Sun" className="sun" style={{ left: `calc(${55}% - 25px)` }} />
+        {image ? (
+          <div className="result-shell">
+            <div className="preview-card">
+              <p className="section-label">Your image</p>
+              {previewUrl && (
+                <div className="preview-frame">
+                  <img src={previewUrl} alt="Uploaded preview" className="preview-image" />
+                </div>
+              )}
+            </div>
+
+            <div className="analysis-card">
+              <div className="progress-card">
+                <div className="progress-meta">
+                  <span>Vision confidence</span>
+                  <strong>{scanProgress}%</strong>
+                </div>
+                <div className="sun-bar">
+                  <div className="sunlight" style={{ width: `${scanProgress}%` }} />
+                  <img src={sun} alt="Sun" className="sun" style={{ left: `calc(${scanProgress}% - 22px)` }} />
+                </div>
+              </div>
+
+              <div className="result-panel">
+                <p className="section-label">Gemini description</p>
+                {error ? <pre className="error-block">{error}</pre> : null}
+                {description ? (
+                  <pre className="description-block">{description}</pre>
+                ) : (
+                  <p className="loading-text">Loading description from Gemini...</p>
+                )}
+              </div>
             </div>
           </div>
+        ) : (
+          <p className="empty-state">No image was uploaded.</p>
+        )}
 
-          <h2>{55}%</h2>
-          <p><strong>Gemini description:</strong></p>
-          {error ? <pre style={{ color: "#b00020", background: "#fbebe8", padding: "10px", borderRadius: "4px" }}>{error}</pre> : null}
-          {description ? (
-            <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#f5f5f5", padding: "15px", borderRadius: "4px" }}>
-              {description}
-            </pre>
-          ) : (
-            <p style={{ color: "#666", fontStyle: "italic" }}>Loading description from Gemini...</p>
-          )}
-        </>
-      ) : (
-        <p style={{ color: "#666" }}>No image was uploaded.</p>
-      )}
-
-    </div>
+        <div className="context-card">
+          <p className="section-label">Optional context</p>
+          <p>
+            <strong>Address:</strong> {address || "Not provided"}
+          </p>
+          <p>
+            <strong>Monthly electric bill:</strong> {electricBill || "Not provided"}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

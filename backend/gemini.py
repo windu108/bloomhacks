@@ -19,7 +19,7 @@ from google.genai import types
 # This function expects 'image_bytes' (raw binary data). 
 # The '*' forces 'mime_type' to be a named argument when called, preventing typos.
 # '-> str' tells anyone reading the code that this function promises to return text.
-def describe_image_bytes(image_bytes: bytes, *, mime_type: str | None = None) -> str:
+def describe_image_bytes(image_bytes: bytes, *, mime_type: str | None = None, address: str | None = None, monthly_electric_bill: str | None = None,) -> str:
     """Describe an image using Gemini and return the text."""
 
     # This searches your computer for a variable named 'GEMINI_API_KEY'.
@@ -42,6 +42,12 @@ def describe_image_bytes(image_bytes: bytes, *, mime_type: str | None = None) ->
     # ---------------------------------------------------------
     # 3. TALKING TO THE AI MODEL
     # ---------------------------------------------------------
+    prompt_parts = ["Describe this image in a few sentences. Focus on what is shown."]
+    if address:
+        prompt_parts.append(f"User address: {address}.")
+    if monthly_electric_bill:
+        prompt_parts.append(f"Estimated monthly electricity bill: {monthly_electric_bill}.")
+
     # client.models.generate_content is a synchronous network request. 
     # Python will halt completely on this block until Google sends a response back.
     response = client.models.generate_content(
@@ -55,7 +61,7 @@ def describe_image_bytes(image_bytes: bytes, *, mime_type: str | None = None) ->
             types.Part.from_bytes(data=image_bytes, mime_type=mt),
             
             # The context/instruction prompt telling the model what we want it to do with the image.
-            "Describe this image in a few sentences. Focus on what is shown."
+            " ".join(prompt_parts)
         ],
     )
 

@@ -18,6 +18,7 @@ sys.path.append("/Users/ethanwood/Desktop/BloomKnights/BloomTest")
 
 # Now that Python knows where to look, we can import your custom Gemini function
 from gemini import describe_image_bytes
+from solar_brain import save_user_inputs
 
 # Initialize the Flask application. '__name__' just tells Flask where this file lives.
 app = Flask(__name__)
@@ -52,6 +53,8 @@ def describe_image():
     # 2. Extract the specific pieces of data using the dictionary keys we defined in React.
     image_b64 = data.get("image_b64")
     mime_type = data.get("mime_type")  # Will be None if React didn't provide it
+    address = data.get("address")
+    monthly_electric_bill = data.get("monthly_electric_bill")
 
     # 3. Validation: If the request didn't include the image data, stop immediately.
     # Return a 400 Bad Request HTTP status code so the frontend knows it messed up.
@@ -66,14 +69,22 @@ def describe_image():
         # If the string was corrupted and can't be decoded, catch the error gracefully.
         return jsonify({"error": "Invalid base64"}), 400
 
-    # 5. AI Execution: Pass the raw bytes to your custom Gemini function.
+    # 5. Save the optional user context to the solar brain helper.
+    save_user_inputs(address, monthly_electric_bill)
+
+    # 6. AI Execution: Pass the raw bytes to your custom Gemini function.
     # The code will pause on this line and wait for Google's servers to respond.
-    description = describe_image_bytes(image_bytes, mime_type=mime_type)
+    description = describe_image_bytes(
+        image_bytes,
+        mime_type=mime_type,
+        address=address,
+        monthly_electric_bill=monthly_electric_bill,
+    )
     
-    # 6. Logging: Print the AI's response to this terminal so you can read it instantly.
+    # 7. Logging: Print the AI's response to this terminal so you can read it instantly.
     print(description)
 
-    # 7. Response: Package the text into a JSON object and ship it back to React.
+    # 8. Response: Package the text into a JSON object and ship it back to React.
     return jsonify({"description": description})
 
 
