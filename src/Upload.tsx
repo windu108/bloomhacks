@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import sun from "./assets/sun.png";
+import "./Upload.css";
+import "./index.css"
 
 // 1. Define an interface for what we expect to find inside React Router's memory state.
 // This tells TypeScript that 'location.state' might contain an 'image' which is a standard web File object.
@@ -95,7 +98,8 @@ function Upload() {
   }, [image]);
 
   return (
-    <div style={{ padding: "20px", fontFamily: "sans-serif" }}>
+    <div className="page">
+    <div className="container" style={{ padding: "20px", fontFamily: "sans-serif" }}>
       <h1>Upload Complete!</h1>
 
       {image ? (
@@ -109,7 +113,14 @@ function Upload() {
             />
           )}
           <hr />
+          <div>
+            <div className="sun-bar">
+              <div className="sunlight" style={{width: `${55}%`}}/>
+              <img src={sun} alt="Sun" className="sun" style={{ left: `calc(${55}% - 25px)` }} />
+            </div>
+          </div>
 
+          <h2>{55}%</h2>
           <p><strong>Gemini description:</strong></p>
           {error ? <pre style={{ color: "#b00020", background: "#fbebe8", padding: "10px", borderRadius: "4px" }}>{error}</pre> : null}
           {description ? (
@@ -123,6 +134,8 @@ function Upload() {
       ) : (
         <p style={{ color: "#666" }}>No image was uploaded.</p>
       )}
+
+    </div>
     </div>
   );
 }

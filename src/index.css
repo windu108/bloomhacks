@@ -109,3 +109,31 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+.page {
+  min-height: 100vh;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background: linear-gradient(
+    circle at top, #1e293b,
+    #0f172a
+  );
+}
+
+
+.card {
+  width: 600px;
+  padding: 40px;
+
+  background: white;
+
+  border-radius: 25px;
+
+  box-shadow: 
+    0 10px 30px rgba(0,0,0,0.15);
+
+  text-align: center;
+}

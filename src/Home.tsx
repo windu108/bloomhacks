@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "./Home.css";
 
 function Home() {
   const [image, setImage] = useState(null);
@@ -21,6 +22,13 @@ function Home() {
 
   return (
     <div>
+      {/*<input type="range" min="0" max="100" value={percent} onChange={(e) => setPercent(e.target.value)} />
+      
+      <div className="sun-bar">
+        <div className="sun" style={{ left: `calc(${percent}% - 25 px)` }}>
+          <img src={sun} alt="Sun" className="sun-image" />
+        </div>
+      </div>*/}
       <h1>Upload an Image</h1>
 
       <input 
@@ -38,6 +46,7 @@ function Home() {
       <button onClick={handleContinue}>
         Continue
       </button>
+
     </div>
   );
 }
