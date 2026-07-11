@@ -16,7 +16,12 @@ from flask_cors import CORS                # The security bouncer that lets Reac
 sys.path.append(os.path.dirname(__file__))
 
 # Now that Python knows where to look, we can import your custom Gemini functions
-from gemini import describe_image_bytes, evaluate_and_split_solar_data
+from gemini import (
+    describe_image_bytes,
+    evaluate_and_split_solar_data,
+    generate_next_steps_for_solar_context,
+    get_estimated_energy_price,
+)
 from solar_brain import save_user_inputs, solar_context
 
 # Initialize the Flask application. '__name__' just tells Flask where this file lives.
@@ -88,27 +93,39 @@ def describe_image():
 
     solar_context.set_value("ai_image_analysis", analysis)
 
-    # 8. Build the summary for the second Gemini evaluation and print it.
+    # 8. Ask Gemini for the likely current electricity price for the provided address.
+    estimated_energy_price = get_estimated_energy_price(address)
+    solar_context.set_value("energy_price", {"estimated_price": estimated_energy_price})
+    print("=== ENERGY PRICE DEBUG ===")
+    print(estimated_energy_price)
+
+    # 9. Build the summary for the second Gemini evaluation and print it.
     ai_summary = solar_context.compile_summary_for_ai()
     print("=== AI SUMMARY FOR SOLAR EVALUATION ===")
     print(ai_summary)
 
-    # 9. Ask Gemini to evaluate the full solar context and return the score/reasoning.
+    # 10. Ask Gemini to evaluate the full solar context and return the score/reasoning.
     score, reasoning = evaluate_and_split_solar_data(ai_summary)
     solar_context.set_value("compatibility_score", {"score": score})
     print(f"=== COMPATIBILITY SCORE DEBUG ===")
     print(f"score={score}")
     print(f"reasoning={reasoning}")
 
-    # 10. Response: Package the results into a JSON object and ship it back to React.
+    next_steps = generate_next_steps_for_solar_context(ai_summary, score)
+    print("=== NEXT STEPS DEBUG ===")
+    print(next_steps)
+
+    # 11. Response: Package the results into a JSON object and ship it back to React.
     return jsonify({
         "description": description,
         "analysis": analysis,
         "summary": ai_summary,
+        "estimated_energy_price": estimated_energy_price,
         "evaluation": {
             "score": score,
             "reasoning": reasoning,
         },
+        "next_steps": next_steps,
         "context": solar_context.get_full_context(),
     })
 

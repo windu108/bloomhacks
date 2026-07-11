@@ -118,6 +118,11 @@
   gap: 12px;
 }
 
+.full-width-panel {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
 .context-card {
   width: 100%;
   padding: 16px 18px;

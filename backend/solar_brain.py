@@ -24,6 +24,9 @@ class SolarContext:
             },
             "compatibility_score": {
                 "score": None,
+            },
+            "energy_price": {
+                "estimated_price": None,
             }
         }
 

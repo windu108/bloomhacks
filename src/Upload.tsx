@@ -20,7 +20,8 @@ function Upload() {
   const electricBill = location.state?.electricBill ?? "";
 
   // 2. Strongly type your state variables
-  const [description, setDescription] = useState<string>("");
+  const [reasoningText, setReasoningText] = useState<string>("");
+  const [recommendationText, setRecommendationText] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [scanProgress, setScanProgress] = useState<number>(0);
@@ -42,7 +43,8 @@ function Upload() {
 
     const run = async () => {
       setError("");
-      setDescription("");
+      setReasoningText("");
+      setRecommendationText("");
       setScanProgress(0);
 
       try {
@@ -93,15 +95,19 @@ function Upload() {
           analysis?: Record<string, unknown>;
           evaluation?: { score?: number; reasoning?: string };
           summary?: string;
+          next_steps?: string;
         };
 
         const reasoning = json.evaluation?.reasoning?.trim() || "";
         const score = typeof json.evaluation?.score === "number" ? json.evaluation.score : 0;
+        const nextSteps = json.next_steps?.trim() || "";
 
         console.log("Frontend received evaluation score:", score);
         console.log("Frontend received reasoning:", reasoning);
+        console.log("Frontend received next steps:", nextSteps);
 
-        setDescription(reasoning || "No solar evaluation was returned by Gemini.");
+        setReasoningText(reasoning || "Loading solar score justification...");
+        setRecommendationText(nextSteps || "Loading recommendations from Gemini...");
         setScanProgress(Math.max(0, Math.min(100, score)));
 
       } catch (e: unknown) {
@@ -158,12 +164,21 @@ function Upload() {
               </div>
 
               <div className="result-panel">
-                <p className="section-label">Gemini reasoning</p>
+                <p className="section-label">Solar score justification</p>
                 {error ? <pre className="error-block">{error}</pre> : null}
-                {description ? (
-                  <pre className="description-block">{description}</pre>
+                {reasoningText ? (
+                  <pre className="description-block">{reasoningText}</pre>
                 ) : (
-                  <p className="loading-text">Loading description from Gemini...</p>
+                  <p className="loading-text">Loading solar score justification...</p>
+                )}
+              </div>
+
+              <div className="result-panel full-width-panel">
+                <p className="section-label">Recommended next steps</p>
+                {recommendationText ? (
+                  <pre className="description-block">{recommendationText}</pre>
+                ) : (
+                  <p className="loading-text">Loading recommendations from Gemini...</p>
                 )}
               </div>
             </div>

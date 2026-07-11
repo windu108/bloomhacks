@@ -159,6 +159,100 @@ TONE & STYLE INSTRUCTIONS:
         return 0, "Error parsing or processing the solar evaluation response profile layout."
 
 
+def get_estimated_energy_price(address: str | None) -> float:
+    """Estimate the likely current energy price for the provided address in dollars per kWh."""
+
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        raise RuntimeError(
+            "Missing GEMINI_API_KEY env var. Set it before running the backend."
+        )
+
+    client = genai.Client(api_key=api_key)
+    normalized_address = (address or "").strip() or "unknown location"
+
+    prompt = f"""
+    You are a helpful energy pricing assistant.
+
+    ADDRESS: {normalized_address}
+
+    Estimate the likely current residential electricity price for this area.
+    Return ONLY a single number representing the price in dollars per kWh.
+    Use a decimal number with no units and no extra text.
+    Example: 0.18
+    """
+
+    response = client.models.generate_content(
+        model="gemini-3.1-flash-lite",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="text/plain"
+        ),
+    )
+
+    try:
+        return float(str(getattr(response, "text", "0")).strip())
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def generate_next_steps_for_solar_context(ai_summary: str, compatibility_score: int) -> str:
+    """Return practical next-step guidance based on the solar compatibility score."""
+
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        raise RuntimeError(
+            "Missing GEMINI_API_KEY env var. Set it before running the backend."
+        )
+
+    client = genai.Client(api_key=api_key)
+
+    if compatibility_score >= 80:
+        prompt = f"""
+        You are a helpful solar concierge.
+
+        PROPERTY DATA:
+        {ai_summary}
+
+        COMPATIBILITY SCORE: {compatibility_score}/100
+
+        The homeowner looks like a strong solar candidate. Give them practical next steps that include:
+        1. A short list of local contractor options they can contact for installation.
+        2. Local solar incentives or rebates that may apply based on their address.
+        3. Solar financing opportunities, especially mentioning OneEthos as a financing option when appropriate.
+        4. A warm, encouraging tone and clear next steps.
+
+        Return the answer as plain English bullet points.
+        """
+    else:
+        prompt = f"""
+        You are a practical energy-cost advisor.
+
+        PROPERTY DATA:
+        {ai_summary}
+
+        COMPATIBILITY SCORE: {compatibility_score}/100
+
+        The homeowner does not look like a strong solar candidate right now. Give them practical, non-solar ways to reduce their home energy costs, such as:
+        1. Upgrading insulation or sealing air leaks.
+        2. Switching to a smart thermostat.
+        3. Replacing old appliances with efficient models.
+        4. Reducing HVAC usage.
+
+        Return the answer as plain English bullet points.
+        """
+
+    response = client.models.generate_content(
+        model="gemini-3.1-flash-lite",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="text/plain"
+        ),
+    )
+
+    return str(getattr(response, "text", ""))
+
+
 # ---------------------------------------------------------
 # 4. RUNTIME GUARD
 # ---------------------------------------------------------
