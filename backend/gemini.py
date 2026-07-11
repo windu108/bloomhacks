@@ -70,22 +70,35 @@ def evaluate_and_split_solar_data(ai_summary: str) -> tuple[int, str]:
     # Initialize connection engine
     client = genai.Client(api_key=api_key)
 
-    # Format our structured prompt, demanding strict JSON back from Gemini
+    # Completely realistic, installer-grade screening prompt
     prompt = f"""
-    You are an expert solar engineering assessment engine. 
-    Analyze the following property data and determine its solar sustainability compatibility.
+    You are a friendly, consultative solar support expert. Your primary goal is to look at a property's data and determine if switching to solar is a genuinely cost-effective, high-return investment for the homeowner.
 
     PROPERTY DATA:
     {ai_summary}
 
-    INSTRUCTIONS:
-    1. Calculate a solar compatibility score between 0 and 100 based strictly on the metrics provided.
-    2. Provide a detailed description of your reasoning explaining why you gave that score.
+    FACTOR WEIGHTING GUIDE (How to calculate the score):
+    1. CRITICAL FINANCIAL & SAFETY LIMITATIONS (Weight: Highest - Overrides everything else):
+       - The Space Deficit (High Bill + Tiny Roof): If a homeowner has a high electric bill (over $200) but a small roof surface area (under 400 sq ft), the score MUST be capped below 55. You must realize that a high bill requires a massive solar system. If they only have 280 sq ft, they physically cannot fit enough panels to offset a bill that large. Do NOT let a high bill inflate the score if they don't have the space to install panels!
+       - Roof Age & Condition: If the roof is 'Weathered', 'Aged', or 'Needs Repair', cap the score below 50. Advise fixing the roof first because detaching and reinstalling panels later costs thousands.
+       - Tiny Electric Bill: If their monthly bill is exceptionally low (under $50), cap the score below 50. Upfront equipment costs will take decades to break even.
 
-    You MUST return your response strictly as a JSON object matching this exact structure. Do not wrap it in markdown formatting:
+    2. EFFICIENCY DRIVERS (Weight: Medium-High):
+       - Heavy Shade / Obstructions: Large trees or massive building shadows that block major parts of the roof drastically lower system efficiency.
+       - Poor Sun Hours: Low regional sunlight availability slows down their return on investment.
+
+    3. MINOR ADJUSTMENTS (Weight: Low - Minimal deductions):
+       - Small tilt variations or single minor obstructions (like a plumbing vent or a single small chimney) are normal and should only cause tiny deductions.
+
+    TONE & STYLE INSTRUCTIONS:
+    - Act like an honest, supportive human adviser who genuinely cares about the homeowner's wallet. Avoid rigid, dry, robotic language.
+    - Be clear about physical constraints! If they have a space deficit, politely explain that their roof space limits how much of that big bill they can actually wipe out.
+    - Write the 'reasoning' section using clean, plain-English bullet points.
+
+    You MUST return your response strictly as a JSON object matching this exact structure. Do not wrap it in markdown code blocks:
     {{
-        "score": 85,
-        "reasoning": "The detailed breakdown of your analysis goes here..."
+        "score": 50,
+        "reasoning": "- Write your first friendly bullet point here highlighting the roof constraint layout.\\n- Write your second bullet point here detailing the structural mismatch.\\n- Write your third bullet point here giving clear, actionable advice on their next steps."
     }}
     """
 
