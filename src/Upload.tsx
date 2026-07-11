@@ -44,6 +44,7 @@ function Upload() {
   const electricBill = location.state?.electricBill ?? "";
 
   // 2. Strongly type your state variables
+  const [description, setDescription] = useState<string>("");
   const [reasoningText, setReasoningText] = useState<string>("");
   const [recommendationText, setRecommendationText] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -72,16 +73,12 @@ function Upload() {
 
     setError("");
     setDescription("");
+    setReasoningText("");
+    setRecommendationText("");
+    setScanProgress(0);
     setIsRegenerating(true);
-    const run = async () => {
-      setError("");
-      setReasoningText("");
-      setRecommendationText("");
-      setScanProgress(0);
 
     try {
-      // 3. Strongly typed Base64 converter.
-      //Accepts a 'File' and promises to eventually resolve into a 'string'
       const toBase64 = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -90,8 +87,7 @@ function Upload() {
 
           reader.onload = () => {
             if (typeof reader.result === "string") {
-              //Split off the metadata prefix (e.g., "data:image/jpeg;base64,") and return just the Base64 string
-              resolve(reader.result.split(',')[1]);
+              resolve(reader.result.split(",")[1]);
             } else {
               reject(new Error("Failed to process image file layout."));
             }
@@ -117,39 +113,25 @@ function Upload() {
       if (!res.ok) {
         const msg: string = await res.text();
         throw new Error(msg || `Request failed: ${res.status}`);
-        // 5. Explicitly type cast the incoming JSON structure from Flask
-        const json = (await res.json()) as {
-          description?: string;
-          analysis?: Record<string, unknown>;
-          evaluation?: { score?: number; reasoning?: string };
-          summary?: string;
-          next_steps?: string;
-        };
-
-        const reasoning = json.evaluation?.reasoning?.trim() || "";
-        const score = typeof json.evaluation?.score === "number" ? json.evaluation.score : 0;
-        const nextSteps = json.next_steps?.trim() || "";
-
-        console.log("Frontend received evaluation score:", score);
-        console.log("Frontend received reasoning:", reasoning);
-        console.log("Frontend received next steps:", nextSteps);
-
-        setReasoningText(reasoning || "Loading solar score justification...");
-        setRecommendationText(nextSteps || "Loading recommendations from Gemini...");
-        setScanProgress(Math.max(0, Math.min(100, score)));
-
-      } catch (e: unknown) {
-        // TypeScript enforces that errors caught in a try/catch are typed as 'unknown' 
-        // because anything can technically be thrown in JavaScript. We safely extract the message here:
-        if (e instanceof Error) {
-          setError(e.message);
-        } else {
-          setError(String(e));
-        }
       }
 
-      const json = (await res.json()) as { description?: string; context_values?: ContextValues };
+      const json = (await res.json()) as {
+        description?: string;
+        analysis?: Record<string, unknown>;
+        evaluation?: { score?: number; reasoning?: string };
+        summary?: string;
+        next_steps?: string;
+        context_values?: ContextValues;
+      };
+
+      const reasoning = typeof json.evaluation?.reasoning === "string" ? json.evaluation.reasoning.trim() : "";
+      const score = typeof json.evaluation?.score === "number" ? json.evaluation.score : 0;
+      const nextSteps = typeof json.next_steps === "string" ? json.next_steps.trim() : "";
+
       setDescription(json.description || "");
+      setReasoningText(reasoning || "Loading solar score justification...");
+      setRecommendationText(nextSteps || "Loading recommendations from Gemini...");
+      setScanProgress(Math.max(0, Math.min(100, score)));
 
       if (json.context_values) {
         setContextValues((current) => ({ ...current, ...json.context_values }));
@@ -198,13 +180,24 @@ function Upload() {
 
         {image ? (
           <div className="result-shell">
-            <div className="preview-card">
-              <p className="section-label">Your image</p>
-              {previewUrl && (
-                <div className="preview-frame">
-                  <img src={previewUrl} alt="Uploaded preview" className="preview-image" />
-                </div>
-              )}
+            <div className="left-column">
+              <div className="preview-card">
+                <p className="section-label">Your image</p>
+                {previewUrl && (
+                  <div className="preview-frame">
+                    <img src={previewUrl} alt="Uploaded preview" className="preview-image" />
+                  </div>
+                )}
+              </div>
+
+              <div className="recommendations-card">
+                <p className="section-label">Recommended next steps</p>
+                {recommendationText ? (
+                  <div className="description-block">{recommendationText}</div>
+                ) : (
+                  <p className="loading-text">Loading recommendations from Gemini...</p>
+                )}
+              </div>
             </div>
 
             <div className="analysis-card">
@@ -220,21 +213,21 @@ function Upload() {
               </div>
 
               <div className="result-panel">
-                <p className="section-label">Solar score justification</p>
-                {error ? <pre className="error-block">{error}</pre> : null}
-                {reasoningText ? (
-                  <pre className="description-block">{reasoningText}</pre>
+                <p className="section-label">Gemini description</p>
+                {error ? <div className="error-block">{error}</div> : null}
+                {description ? (
+                  <div className="description-block">{description}</div>
                 ) : (
-                  <p className="loading-text">Loading solar score justification...</p>
+                  <p className="loading-text">Loading description from Gemini...</p>
                 )}
               </div>
 
-              <div className="result-panel full-width-panel">
-                <p className="section-label">Recommended next steps</p>
-                {recommendationText ? (
-                  <pre className="description-block">{recommendationText}</pre>
+              <div className="result-panel">
+                <p className="section-label">Solar score justification</p>
+                {reasoningText ? (
+                  <div className="description-block">{reasoningText}</div>
                 ) : (
-                  <p className="loading-text">Loading recommendations from Gemini...</p>
+                  <p className="loading-text">Loading solar score justification...</p>
                 )}
               </div>
 

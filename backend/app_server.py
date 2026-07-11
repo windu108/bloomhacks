@@ -23,7 +23,7 @@ from gemini import (
     generate_next_steps_for_solar_context,
     get_estimated_energy_price,
 )
-from solar_brain import save_user_inputs, solar_context
+from solar_brain import normalize_context_payload, save_user_inputs, solar_context
 
 # Initialize the Flask application. '__name__' just tells Flask where this file lives.
 app = Flask(__name__)
@@ -94,18 +94,36 @@ def describe_image():
 
     # 6. AI Execution: Pass the raw bytes to your custom Gemini function.
     # The code will pause on this line and wait for Google's servers to respond.
-    description = describe_image_bytes(image_bytes, mime_type=mime_type)
+    analysis_payload = describe_image_bytes(
+        image_bytes,
+        mime_type=mime_type,
+        address=address,
+        monthly_electric_bill=monthly_electric_bill,
+        context_values=context_values,
+    )
 
     # 7. Parse the image-analysis JSON and save it into the solar context.
-    try:
-        analysis = json.loads(description)
-    except (json.JSONDecodeError, TypeError):
-        analysis = {
+    if isinstance(analysis_payload, dict):
+        description = str(analysis_payload.get("description", ""))
+        analysis = analysis_payload.get("analysis") or {
             "roof_material": None,
             "roof_quality": None,
             "roof_tilting": None,
             "obstructions": [],
         }
+        context_values_out = analysis_payload.get("context_values") or {}
+    else:
+        description = str(analysis_payload or "")
+        try:
+            analysis = json.loads(description)
+        except (json.JSONDecodeError, TypeError):
+            analysis = {
+                "roof_material": None,
+                "roof_quality": None,
+                "roof_tilting": None,
+                "obstructions": [],
+            }
+        context_values_out = {}
 
     solar_context.set_value("ai_image_analysis", analysis)
 
@@ -142,6 +160,7 @@ def describe_image():
             "reasoning": reasoning,
         },
         "next_steps": next_steps,
+        "context_values": context_values_out,
         "context": solar_context.get_full_context(),
     })
 

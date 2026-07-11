@@ -51,7 +51,7 @@ def describe_image_bytes(
     monthly_electric_bill: str | None = None,
     context_values: dict | None = None,
 ) -> dict:
-    """Describe an image using Gemini and return the text plus editable context values."""
+    """Describe an image using Gemini and return a structured analysis object."""
 
     # This searches your computer for a variable named 'GEMINI_API_KEY'.
     # If it can't find one, it falls back to the hardcoded string provided as the second argument.
@@ -70,8 +70,14 @@ def describe_image_bytes(
     # Fallback safety: If React didn't tell us what file type it was, assume it's a standard JPEG.
     mt = mime_type or "image/jpeg"
 
-    # Targeted architectural extraction prompt
-    prompt = """
+    normalized_context = normalize_context_payload(context_values)
+    context_notes = []
+    for key in ALLOWED_CONTEXT_FIELDS:
+        value = normalized_context.get(key)
+        if value not in (None, ""):
+            context_notes.append(f"{ALLOWED_CONTEXT_FIELDS[key]}: {value}")
+
+    prompt = f"""
     You are an expert satellite and aerial imagery analysis engine for solar installations.
     Analyze this image of a residential property roof and extract the required parameters.
 
@@ -81,13 +87,18 @@ def describe_image_bytes(
     3. roof_tilting: Estimate the roof slope or pitch layout (e.g., 'Flat', '15 degrees', '25 degrees', 'Steep'). If unknown, use null.
     4. obstructions: List any physical objects blocking clear sunlight exposure (e.g., 'tree overhang', 'large chimney', 'skylight', 'plumbing vents'). Return an empty array [] if clear.
 
+    USER CONTEXT:
+    {', '.join(context_notes) if context_notes else 'No additional context provided.'}
+    Address: {address or 'Not provided'}
+    Energy consumption: {monthly_electric_bill or 'Not provided'}
+
     You MUST return your response strictly as a JSON object matching this exact structure. Do not wrap it in markdown code blocks:
-    {
+    {{
         "roof_material": "Asphalt Shingle",
         "roof_quality": "Good",
         "roof_tilting": "25 degrees",
         "obstructions": ["large chimney", "tree overhang"]
-    }
+    }}
     """
 
     # client.models.generate_content is a synchronous network request. 
@@ -108,8 +119,32 @@ def describe_image_bytes(
         )
     )
 
-    # We drill down specifically into '.text' to extract the AI's JSON structured string.
-    return response.text
+    raw_text = getattr(response, "text", "") or ""
+    try:
+        parsed = json.loads(raw_text)
+    except (TypeError, json.JSONDecodeError):
+        parsed = {}
+
+    normalized_analysis = normalize_context_payload(parsed)
+    for key in ["roof_material", "roof_quality", "roof_tilting", "obstructions"]:
+        if key not in normalized_analysis:
+            normalized_analysis[key] = None
+
+    description = (
+        f"Roof material: {normalized_analysis.get('roof_material') or 'not provided'}. "
+        f"Roof quality: {normalized_analysis.get('roof_quality') or 'not provided'}."
+    )
+
+    return {
+        "description": description,
+        "analysis": {
+            "roof_material": normalized_analysis.get("roof_material"),
+            "roof_quality": normalized_analysis.get("roof_quality"),
+            "roof_tilting": normalized_analysis.get("roof_tilting"),
+            "obstructions": normalized_analysis.get("obstructions") or [],
+        },
+        "context_values": {key: normalized_analysis.get(key) for key in ALLOWED_CONTEXT_FIELDS},
+    }
 
 
 
