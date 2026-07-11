@@ -123,10 +123,7 @@ def evaluate_and_split_solar_data(ai_summary: str) -> tuple[int, str]:
 TONE & STYLE INSTRUCTIONS:
     - Act like an honest, supportive human adviser who genuinely cares about the homeowner's wallet. Avoid rigid, dry, robotic language.
     - Be clear about physical or economic constraints.
-    - CONDITIONAL ACTIONABLE ADVICE RULE:
-      * IF NOT SUITABLE FOR SOLAR (Score is under 60): Do not push solar on them. Instead, use your final bullets to give them alternative, highly practical advice for reducing their home energy usage instead (e.g., switching to a smart thermostat, upgrading attic insulation, upgrading old appliances, or checking for window air leaks).
-      * IF COMPATIBLE WITH SOLAR (Score is 60 or above): Teach them exactly how to get started on their solar journey (e.g., gathering 12 months of consecutive electric bills, checking local net-metering policies, and finding a reputable local installer who offers production guarantees).
-    - Write the 'reasoning' section using clean, plain-English bullet points.
+    - Do not give recommendations on next stops, just explain reasoning for compatibility score. Next steps will be handled in a separate function.
 
     You MUST return your response strictly as a JSON object matching this exact structure. Do not wrap it in markdown code blocks:
     {{
