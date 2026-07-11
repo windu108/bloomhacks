@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)",
+      "Bash(curl -s \"http://localhost:3000/api/satellite?lat=37.7749&lon=-122.4194\")",
+      "Bash(curl -sI \"http://localhost:3000/api/satellite/image?lat=37.7749&lon=-122.4194\")",
+      "Bash(npm install:*)",
+      "Bash(git ls-tree:*)"
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 import './App.css'
 import Home from './Home'
 import Upload from './Upload.jsx'
+import SolarPlanner from './SolarPlanner'
 
 import{ BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 
@@ -120,6 +121,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/upload" element={<Upload />} />
+          <Route path="/solar" element={<SolarPlanner />} />
         </Routes>
       </Router>
     </>
