@@ -91,7 +91,6 @@ header p {
   color: #f9c846;
 }
 
-/* Stack the canvas directly over the image */
 #image-container {
   position: relative;
   width: 640px;
@@ -121,29 +120,143 @@ header p {
   font-family: monospace;
 }
 
-#trace-controls {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 0.75rem;
+.compass-label {
+  font-size: 0.7rem;
+  color: #8a8fa8;
+  margin-left: 0.5rem;
+  vertical-align: middle;
 }
 
-#trace-btn {
-  padding: 0.6rem 1.2rem;
-  background: transparent;
+#viewer-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
   color: #f9c846;
-  border: 1px solid #f9c846;
+}
+
+#three-container {
+  width: 640px;
+  height: 480px;
+  border: 1px solid #2e3147;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #1a1d2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-text {
+  color: #4a4f6a;
+  font-size: 0.9rem;
+}
+
+#three-container canvas {
+  display: block;
+}
+
+#roof-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: #8a8fa8;
+}
+
+#pitch-slider {
+  margin-left: 0.5rem;
+  accent-color: #f9c846;
+  width: 140px;
+  vertical-align: middle;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+#solar-stats-bar {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.solar-stat {
+  font-size: 0.85rem;
+  color: #8a8fa8;
+}
+
+.solar-stat strong {
+  color: #e8eaf0;
+}
+
+#panel-controls {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+#panel-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+#panel-buttons button {
+  padding: 0.55rem 1rem;
   border-radius: 6px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s;
+  transition: opacity 0.15s;
 }
 
-#trace-btn:hover { background: rgba(249,200,70,0.1); }
-#trace-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+#recommended-btn {
+  background: #4ade80;
+  color: #0f1117;
+  border: none;
+}
 
-#trace-hint {
-  color: #4a4f6a;
+#fill-btn {
+  background: transparent;
+  color: #f9c846;
+  border: 1px solid #f9c846;
+}
+
+#clear-panels-btn {
+  background: transparent;
+  color: #8a8fa8;
+  border: 1px solid #2e3147;
+}
+
+#panel-buttons button:hover { opacity: 0.8; }
+
+#panel-stats {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.95rem;
+  color: #e8eaf0;
+}
+
+#kwh-estimate {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+#ai-reasoning {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: #1a1d2e;
+  border: 1px solid #2e3147;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #c0c4d4;
+}
+
+#ai-reasoning .ai-summary {
+  color: #e8eaf0;
 }

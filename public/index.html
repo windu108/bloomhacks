@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Solar Roof Planner</title>
   <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
 </head>
 <body>
   <div id="app">
@@ -30,23 +38,53 @@
     <section id="result-section" hidden>
       <div id="geocode-result"></div>
 
-      <!-- Phase 3: satellite image -->
+      <!-- Satellite image -->
       <div id="satellite-section" hidden>
         <h2>Satellite View</h2>
-        <!-- canvas sits on top of the img via CSS stacking; used for overlays in Phase 4+ -->
         <div id="image-container">
           <img id="satellite-img" width="640" height="640" alt="Satellite view" />
           <svg id="overlay-svg" width="640" height="640" xmlns="http://www.w3.org/2000/svg"></svg>
         </div>
         <p id="bbox-info" class="meta"></p>
-        <div id="trace-controls" hidden>
-          <button id="trace-btn">Trace Roof with AI</button>
-          <span id="trace-hint" class="meta">Drag corners to adjust &bull; Click edge midpoint to add vertex &bull; Double-click vertex to remove</span>
+      </div>
+
+      <!-- 3D viewer -->
+      <div id="viewer-section" hidden>
+        <h2>3D Roof Model <span class="compass-label">&#9650; N</span></h2>
+        <div id="three-container">
+          <span class="placeholder-text">Initializing 3D scene…</span>
+        </div>
+        <div id="roof-controls" hidden>
+          <label>
+            Pitch: <span id="pitch-value">27</span>°
+            <input type="range" id="pitch-slider" min="5" max="60" value="27" step="1" />
+          </label>
+          <label class="toggle-label">
+            <input type="checkbox" id="flat-roof-toggle" />
+            Flat roof
+          </label>
+        </div>
+
+        <!-- Panel controls -->
+        <div id="panel-controls" hidden>
+          <div id="solar-stats-bar"></div>
+          <div id="panel-buttons">
+            <button id="recommended-btn">AI Recommend</button>
+            <button id="fill-btn">Place All</button>
+            <button id="clear-panels-btn">Clear</button>
+          </div>
+          <div id="panel-stats">
+            <span id="panel-count">0 panels placed</span>
+            <span id="kwh-estimate"></span>
+          </div>
+          <div id="ai-reasoning" hidden></div>
+          <p class="meta">Click a slot to place a panel &bull; Click a placed panel to remove it</p>
         </div>
       </div>
     </section>
   </div>
 
   <script src="app.js"></script>
+  <script type="module" src="viewer.js"></script>
 </body>
 </html>
