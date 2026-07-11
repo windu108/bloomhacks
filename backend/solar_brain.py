@@ -1,4 +1,4 @@
-
+from __future__ import annotations
 
 class SolarContext:
     def __init__(self):
@@ -71,3 +71,20 @@ class SolarContext:
             summary_lines.append("") # blank line for spacing
             
         return "\n".join(summary_lines)
+
+
+solar_context = SolarContext()
+
+
+def save_user_inputs(address: str | None, monthly_electric_bill: str | None) -> None:
+    """Store optional address and bill details for the solar analysis workflow."""
+    normalized_address = (address or "").strip() or None
+    normalized_bill = (monthly_electric_bill or "").strip() or None
+
+    solar_context.set_value(
+        "user_inputs",
+        {
+            "address": normalized_address,
+            "monthly_electric_bill": normalized_bill,
+        },
+    )
