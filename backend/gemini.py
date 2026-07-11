@@ -38,19 +38,42 @@ def describe_image_bytes(image_bytes: bytes, *, mime_type: str | None = None) ->
     # Fallback safety: If React didn't tell us what file type it was, assume it's a standard JPEG.
     mt = mime_type or "image/jpeg"
 
+    # Targeted architectural extraction prompt
+    prompt = """
+    You are an expert satellite and aerial imagery analysis engine for solar installations.
+    Analyze this image of a residential property roof and extract the required parameters.
+
+    EXTRACTION RULES:
+    1. roof_material: Identify the material (e.g., 'Asphalt Shingle', 'Standing-Seam Metal', 'Clay Tile', 'Concrete Tile', 'Slate', 'Flat Tar'). If unknown, use null.
+    2. roof_quality: Assess the structural condition based on visible weathering (e.g., 'Excellent', 'Good', 'Weathered / Aged', 'Needs Repair'). If unknown, use null.
+    3. roof_tilting: Estimate the roof slope or pitch layout (e.g., 'Flat', '15 degrees', '25 degrees', 'Steep'). If unknown, use null.
+    4. obstructions: List any physical objects blocking clear sunlight exposure (e.g., 'tree overhang', 'large chimney', 'skylight', 'plumbing vents'). Return an empty array [] if clear.
+
+    You MUST return your response strictly as a JSON object matching this exact structure. Do not wrap it in markdown code blocks:
+    {
+        "roof_material": "Asphalt Shingle",
+        "roof_quality": "Good",
+        "roof_tilting": "25 degrees",
+        "obstructions": ["large chimney", "tree overhang"]
+    }
+    """
+
     # client.models.generate_content is a synchronous network request. 
     response = client.models.generate_content(
         model="gemini-3.1-flash-lite",  # Tells Google exactly which AI engine brain to use
         contents=[
             # Helper tool that neatly wraps raw binary bytes and pairs them with a mime_type (e.g. 'image/png')
             types.Part.from_bytes(data=image_bytes, mime_type=mt),
-            # The context/instruction prompt telling the model what we want it to do with the image.
-            "Describe this image in a few sentences. Focus on what is shown."
+            prompt
         ],
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json"  # Forces the engine to return a raw JSON string
+        )
     )
 
-    # We drill down specifically into '.text' to extract just the AI's written words.
+    # We drill down specifically into '.text' to extract the AI's JSON structured string.
     return response.text
+
 
 
 # ---------------------------------------------------------
@@ -90,15 +113,18 @@ def evaluate_and_split_solar_data(ai_summary: str) -> tuple[int, str]:
     3. MINOR ADJUSTMENTS (Weight: Low - Minimal deductions):
        - Small tilt variations or single minor obstructions (like a plumbing vent or a single small chimney) are normal and should only cause tiny deductions.
 
-    TONE & STYLE INSTRUCTIONS:
+TONE & STYLE INSTRUCTIONS:
     - Act like an honest, supportive human adviser who genuinely cares about the homeowner's wallet. Avoid rigid, dry, robotic language.
-    - Be clear about physical constraints! If they have a space deficit, politely explain that their roof space limits how much of that big bill they can actually wipe out.
+    - Be clear about physical or economic constraints.
+    - CONDITIONAL ACTIONABLE ADVICE RULE:
+      * IF NOT SUITABLE FOR SOLAR (Score is under 60): Do not push solar on them. Instead, use your final bullets to give them alternative, highly practical advice for reducing their home energy usage instead (e.g., switching to a smart thermostat, upgrading attic insulation, upgrading old appliances, or checking for window air leaks).
+      * IF COMPATIBLE WITH SOLAR (Score is 60 or above): Teach them exactly how to get started on their solar journey (e.g., gathering 12 months of consecutive electric bills, checking local net-metering policies, and finding a reputable local installer who offers production guarantees).
     - Write the 'reasoning' section using clean, plain-English bullet points.
 
     You MUST return your response strictly as a JSON object matching this exact structure. Do not wrap it in markdown code blocks:
     {{
         "score": 50,
-        "reasoning": "- Write your first friendly bullet point here highlighting the roof constraint layout.\\n- Write your second bullet point here detailing the structural mismatch.\\n- Write your third bullet point here giving clear, actionable advice on their next steps."
+        "reasoning": "- [Friendly bullet point highlighting their roof suitability or major constraints]\\n- [Bullet point breaking down the financial logic of their bill vs available spacing or weather]\\n- [Actionable bullet point: If unsuitable, alternative energy-saving tips. If compatible, how to get started with solar]"
     }}
     """
 

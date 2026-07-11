@@ -6,18 +6,18 @@ load_dotenv()  # This loads the variables from your .env file!
 
 import os        # Lets Python read your computer's environment variables (like PORT)
 import base64    # Used to decode the text-based image back into raw binary file data
+import json      # Used to parse structured JSON returned by Gemini
 import sys       # Lets us modify how Python looks for other files in your project
 
 from flask import Flask, request, jsonify  # The core tools to build a web server
 from flask_cors import CORS                # The security bouncer that lets React in
 
-# Python usually only looks for imports in the exact folder this script is running from.
-# Because your 'gemini.py' is inside an 'app/' folder, we append your master project 
-# path to Python's system path so it knows exactly where to find it.
-sys.path.append("/Users/ethanwood/Desktop/BloomKnights/BloomTest")
+# Ensure local modules can be imported when the server is run from the backend directory.
+sys.path.append(os.path.dirname(__file__))
 
-# Now that Python knows where to look, we can import your custom Gemini function
-from gemini import describe_image_bytes
+# Now that Python knows where to look, we can import your custom Gemini functions
+from gemini import describe_image_bytes, evaluate_and_split_solar_data
+from solar_brain import SolarContext
 
 # Initialize the Flask application. '__name__' just tells Flask where this file lives.
 app = Flask(__name__)
@@ -69,12 +69,47 @@ def describe_image():
     # 5. AI Execution: Pass the raw bytes to your custom Gemini function.
     # The code will pause on this line and wait for Google's servers to respond.
     description = describe_image_bytes(image_bytes, mime_type=mime_type)
-    
-    # 6. Logging: Print the AI's response to this terminal so you can read it instantly.
-    print(description)
 
-    # 7. Response: Package the text into a JSON object and ship it back to React.
-    return jsonify({"description": description})
+    # 6. Parse the AI's structured JSON response into a dictionary.
+    try:
+        analysis = json.loads(description)
+    except (json.JSONDecodeError, TypeError):
+        analysis = {
+            "roof_material": None,
+            "roof_quality": None,
+            "roof_tilting": None,
+            "obstructions": [],
+        }
+
+    # 7. Populate the SolarContext with image-analysis data.
+    context = SolarContext()
+    context.set_value("ai_image_analysis", analysis)
+
+    # 8. Optionally merge any user-supplied inputs into the context when present.
+    for category in ("user_inputs", "satelite_data", "sunlight_data"):
+        if category in data:
+            context.set_value(category, data[category])
+
+    # 9. Build the text summary for the second Gemini evaluation and print it.
+    ai_summary = context.compile_summary_for_ai()
+    print("=== AI SUMMARY FOR SOLAR EVALUATION ===")
+    print(ai_summary)
+
+    # 10. Ask Gemini to evaluate the full solar context and return the score/reasoning.
+    score, reasoning = evaluate_and_split_solar_data(ai_summary)
+    context.set_value("compatibility_score", {"score": score})
+
+    # 11. Response: Package the results into a JSON object for the frontend.
+    return jsonify({
+        "description": description,
+        "analysis": analysis,
+        "summary": ai_summary,
+        "evaluation": {
+            "score": score,
+            "reasoning": reasoning,
+        },
+        "context": context.get_full_context(),
+    })
 
 
 # ---------------------------------------------------------
