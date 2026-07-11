@@ -151,6 +151,15 @@
   gap: 10px;
   padding: 14px;
   border-radius: 16px;
+.full-width-panel {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.context-card {
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 18px;
   background: rgba(15, 23, 42, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }

@@ -6,19 +6,24 @@ load_dotenv()  # This loads the variables from your .env file!
 
 import os        # Lets Python read your computer's environment variables (like PORT)
 import base64    # Used to decode the text-based image back into raw binary file data
+import json      # Used to parse structured JSON returned by Gemini
 import sys       # Lets us modify how Python looks for other files in your project
 from pathlib import Path
 
 from flask import Flask, request, jsonify  # The core tools to build a web server
 from flask_cors import CORS                # The security bouncer that lets React in
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.append(str(PROJECT_ROOT))
-sys.path.append(str(Path(__file__).resolve().parent))
+# Ensure local modules can be imported when the server is run from the backend directory.
+sys.path.append(os.path.dirname(__file__))
 
-# Now that Python knows where to look, we can import your custom Gemini function
-from gemini import describe_image_bytes
-from solar_brain import ALLOWED_CONTEXT_FIELDS, normalize_context_payload, save_user_inputs, solar_context
+# Now that Python knows where to look, we can import your custom Gemini functions
+from gemini import (
+    describe_image_bytes,
+    evaluate_and_split_solar_data,
+    generate_next_steps_for_solar_context,
+    get_estimated_energy_price,
+)
+from solar_brain import save_user_inputs, solar_context
 
 # Initialize the Flask application. '__name__' just tells Flask where this file lives.
 app = Flask(__name__)
@@ -89,28 +94,55 @@ def describe_image():
 
     # 6. AI Execution: Pass the raw bytes to your custom Gemini function.
     # The code will pause on this line and wait for Google's servers to respond.
-    analysis = describe_image_bytes(
-        image_bytes,
-        mime_type=mime_type,
-        address=address,
-        monthly_electric_bill=monthly_electric_bill,
-        context_values=context_values,
-    )
+    description = describe_image_bytes(image_bytes, mime_type=mime_type)
 
-    if isinstance(analysis, dict):
-        description = analysis.get("description", "")
-        context_values_out = analysis.get("context_values", {})
-    else:
-        description = str(analysis or "")
-        context_values_out = {}
-    
-    # 7. Logging: Print the AI's response to this terminal so you can read it instantly.
-    print(description)
+    # 7. Parse the image-analysis JSON and save it into the solar context.
+    try:
+        analysis = json.loads(description)
+    except (json.JSONDecodeError, TypeError):
+        analysis = {
+            "roof_material": None,
+            "roof_quality": None,
+            "roof_tilting": None,
+            "obstructions": [],
+        }
 
-    # 8. Response: Package the text into a JSON object and ship it back to React.
+    solar_context.set_value("ai_image_analysis", analysis)
+
+    # 8. Ask Gemini for the likely current electricity price for the provided address.
+    estimated_energy_price = get_estimated_energy_price(address)
+    solar_context.set_value("energy_price", {"estimated_price": estimated_energy_price})
+    print("=== ENERGY PRICE DEBUG ===")
+    print(estimated_energy_price)
+
+    # 9. Build the summary for the second Gemini evaluation and print it.
+    ai_summary = solar_context.compile_summary_for_ai()
+    print("=== AI SUMMARY FOR SOLAR EVALUATION ===")
+    print(ai_summary)
+
+    # 10. Ask Gemini to evaluate the full solar context and return the score/reasoning.
+    score, reasoning = evaluate_and_split_solar_data(ai_summary)
+    solar_context.set_value("compatibility_score", {"score": score})
+    print(f"=== COMPATIBILITY SCORE DEBUG ===")
+    print(f"score={score}")
+    print(f"reasoning={reasoning}")
+
+    next_steps = generate_next_steps_for_solar_context(ai_summary, score)
+    print("=== NEXT STEPS DEBUG ===")
+    print(next_steps)
+
+    # 11. Response: Package the results into a JSON object and ship it back to React.
     return jsonify({
         "description": description,
-        "context_values": context_values_out,
+        "analysis": analysis,
+        "summary": ai_summary,
+        "estimated_energy_price": estimated_energy_price,
+        "evaluation": {
+            "score": score,
+            "reasoning": reasoning,
+        },
+        "next_steps": next_steps,
+        "context": solar_context.get_full_context(),
     })
 
 
