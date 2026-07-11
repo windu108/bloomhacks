@@ -23,10 +23,22 @@ from gemini import (
     generate_next_steps_for_solar_context,
     get_estimated_energy_price,
 )
+from linechart import calculate_solar_savings_summary
 from solar_brain import normalize_context_payload, save_user_inputs, solar_context
 
 # Initialize the Flask application. '__name__' just tells Flask where this file lives.
 app = Flask(__name__)
+
+
+def _coerce_float(value):
+    if value in (None, ""):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value).strip())
+    except (TypeError, ValueError):
+        return None
 
 # Apply CORS (Cross-Origin Resource Sharing) to your app. 
 # Without this, web browsers will block your React app (Port 5173/3000) from talking 
@@ -133,6 +145,13 @@ def describe_image():
     print("=== ENERGY PRICE DEBUG ===")
     print(estimated_energy_price)
 
+    monthly_bill_value = _coerce_float(monthly_electric_bill)
+    estimated_price_value = _coerce_float(estimated_energy_price)
+    solar_savings = calculate_solar_savings_summary(
+        monthly_bill=monthly_bill_value if monthly_bill_value is not None else 200,
+        utility_kwh_rate=estimated_price_value if estimated_price_value is not None else 0.16,
+    )
+
     # 9. Build the summary for the second Gemini evaluation and print it.
     ai_summary = solar_context.compile_summary_for_ai()
     print("=== AI SUMMARY FOR SOLAR EVALUATION ===")
@@ -155,6 +174,7 @@ def describe_image():
         "analysis": analysis,
         "summary": ai_summary,
         "estimated_energy_price": estimated_energy_price,
+        "solar_savings": solar_savings,
         "evaluation": {
             "score": score,
             "reasoning": reasoning,

@@ -12,6 +12,16 @@ interface LocationState {
   electricBill?: string;
 }
 
+interface SolarSavingsSummary {
+  estimated_annual_savings?: number;
+  total_power_price?: number;
+  hourly_energy_cost?: number;
+  break_even_year?: number | null;
+  net_25_year_savings?: number;
+  annual_loan_payment?: number;
+  total_solar_system_cost?: number;
+}
+
 interface ContextValues {
   address?: string | null;
   monthly_electric_bill?: string | null;
@@ -56,6 +66,7 @@ function Upload() {
   });
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [scanProgress, setScanProgress] = useState<number>(0);
+  const [solarSavings, setSolarSavings] = useState<SolarSavingsSummary | null>(null);
 
   // Effect 1: Handle Object URL creation and memory cleanup
   useEffect(() => {
@@ -76,6 +87,7 @@ function Upload() {
     setReasoningText("");
     setRecommendationText("");
     setScanProgress(0);
+    setSolarSavings(null);
     setIsRegenerating(true);
 
     try {
@@ -122,6 +134,7 @@ function Upload() {
         summary?: string;
         next_steps?: string;
         context_values?: ContextValues;
+        solar_savings?: SolarSavingsSummary;
       };
 
       const reasoning = typeof json.evaluation?.reasoning === "string" ? json.evaluation.reasoning.trim() : "";
@@ -132,6 +145,7 @@ function Upload() {
       setReasoningText(reasoning || "Loading solar score justification...");
       setRecommendationText(nextSteps || "Loading recommendations from Gemini...");
       setScanProgress(Math.max(0, Math.min(100, score)));
+      setSolarSavings(json.solar_savings ?? null);
 
       if (json.context_values) {
         setContextValues((current) => ({ ...current, ...json.context_values }));
@@ -162,6 +176,11 @@ function Upload() {
     const value = contextValues[field];
     return typeof value === "string" && value.trim().length > 0;
   });
+
+  const formatCurrency = (value?: number | null) => {
+    if (typeof value !== "number" || Number.isNaN(value)) return "—";
+    return `$${value.toFixed(2)}`;
+  };
 
   return (
     <div className="page">
@@ -273,6 +292,30 @@ function Upload() {
         ) : (
           <p className="empty-state">No image was uploaded.</p>
         )}
+
+        {image && solarSavings ? (
+          <div className="savings-card">
+            <p className="section-label">Solar savings summary</p>
+            <div className="savings-grid">
+              <div>
+                <span className="savings-label">Total power price</span>
+                <strong>{formatCurrency(solarSavings.total_power_price)}</strong>
+              </div>
+              <div>
+                <span className="savings-label">Hourly energy cost</span>
+                <strong>{formatCurrency(solarSavings.hourly_energy_cost)}</strong>
+              </div>
+              <div>
+                <span className="savings-label">Estimated annual savings</span>
+                <strong>{formatCurrency(solarSavings.estimated_annual_savings)}</strong>
+              </div>
+              <div>
+                <span className="savings-label">Break-even year</span>
+                <strong>{solarSavings.break_even_year ?? "—"}</strong>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/*<div className="context-card">
           <p className="section-label">Optional context</p>
