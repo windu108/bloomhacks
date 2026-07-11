@@ -120,8 +120,18 @@ function Upload() {
 
   return (
     <div className="page">
+      <header className="site-header">
+        <div className="brand-block">
+          <img src={sun} alt="SimplySolar logo" className="brand-logo" />
+          <div>
+            <h2 className="brand-title">SimplySolar</h2>
+            <p className="brand-subtitle">Your guide to navigating the complex solar industry</p>
+          </div>
+        </div>
+      </header>
+
       <div className="container">
-        <div className="hero-badge">✨ Analysis complete</div>
+        <div className="insight">✨ Analysis complete</div>
         <h1>Upload Complete!</h1>
 
         {image ? (
