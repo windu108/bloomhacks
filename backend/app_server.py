@@ -15,8 +15,9 @@ from flask_cors import CORS                # The security bouncer that lets Reac
 # Ensure local modules can be imported when the server is run from the backend directory.
 sys.path.append(os.path.dirname(__file__))
 
-# Now that Python knows where to look, we can import your custom Gemini function
-from gemini import describe_image_bytes
+# Now that Python knows where to look, we can import your custom Gemini functions
+from gemini import describe_image_bytes, evaluate_and_split_solar_data
+from solar_brain import save_user_inputs, solar_context
 
 # Initialize the Flask application. '__name__' just tells Flask where this file lives.
 app = Flask(__name__)
@@ -73,12 +74,43 @@ def describe_image():
     # 6. AI Execution: Pass the raw bytes to your custom Gemini function.
     # The code will pause on this line and wait for Google's servers to respond.
     description = describe_image_bytes(image_bytes, mime_type=mime_type)
-    
-    # 6. Logging: Print the AI's response to this terminal so you can read it instantly.
-    print(description)
 
-    # 7. Response: Package the text into a JSON object and ship it back to React.
-    return jsonify({"description": description})
+    # 7. Parse the image-analysis JSON and save it into the solar context.
+    try:
+        analysis = json.loads(description)
+    except (json.JSONDecodeError, TypeError):
+        analysis = {
+            "roof_material": None,
+            "roof_quality": None,
+            "roof_tilting": None,
+            "obstructions": [],
+        }
+
+    solar_context.set_value("ai_image_analysis", analysis)
+
+    # 8. Build the summary for the second Gemini evaluation and print it.
+    ai_summary = solar_context.compile_summary_for_ai()
+    print("=== AI SUMMARY FOR SOLAR EVALUATION ===")
+    print(ai_summary)
+
+    # 9. Ask Gemini to evaluate the full solar context and return the score/reasoning.
+    score, reasoning = evaluate_and_split_solar_data(ai_summary)
+    solar_context.set_value("compatibility_score", {"score": score})
+    print(f"=== COMPATIBILITY SCORE DEBUG ===")
+    print(f"score={score}")
+    print(f"reasoning={reasoning}")
+
+    # 10. Response: Package the results into a JSON object and ship it back to React.
+    return jsonify({
+        "description": description,
+        "analysis": analysis,
+        "summary": ai_summary,
+        "evaluation": {
+            "score": score,
+            "reasoning": reasoning,
+        },
+        "context": solar_context.get_full_context(),
+    })
 
 
 # ---------------------------------------------------------

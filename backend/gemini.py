@@ -5,6 +5,7 @@
 # allowing us to use clean syntax like 'str | None' even on slightly older Python versions.
 from __future__ import annotations 
 
+import json  # Used to parse JSON strings from the Gemini API into Python dictionaries
 import os  # Used to look up environment variables from your operating system
 
 # The official Google GenAI library. 'genai' contains the core client tools,
