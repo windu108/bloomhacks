@@ -158,7 +158,7 @@ function Upload() {
           <p className="empty-state">No image was uploaded.</p>
         )}
 
-        <div className="context-card">
+        {/*<div className="context-card">
           <p className="section-label">Optional context</p>
           <p>
             <strong>Address:</strong> {address || "Not provided"}
@@ -166,7 +166,7 @@ function Upload() {
           <p>
             <strong>Monthly electric bill:</strong> {electricBill || "Not provided"}
           </p>
-        </div>
+        </div>*/}
       </div>
     </div>
   );
