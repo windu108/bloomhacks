@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar Roof Planner</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Solar Roof Planner</h1>
+      <p>Enter your address to get started</p>
+    </header>
+
+    <section id="address-section">
+      <form id="address-form">
+        <input
+          type="text"
+          id="address-input"
+          placeholder="123 Main St, Springfield, IL"
+          autocomplete="street-address"
+          required
+        />
+        <button type="submit" id="go-btn">Go</button>
+      </form>
+      <div id="status"></div>
+    </section>
+
+    <section id="result-section" hidden>
+      <div id="geocode-result"></div>
+
+      <!-- Phase 3: satellite image -->
+      <div id="satellite-section" hidden>
+        <h2>Satellite View</h2>
+        <!-- canvas sits on top of the img via CSS stacking; used for overlays in Phase 4+ -->
+        <div id="image-container">
+          <img id="satellite-img" width="640" height="640" alt="Satellite view" />
+          <svg id="overlay-svg" width="640" height="640" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+        <p id="bbox-info" class="meta"></p>
+        <div id="trace-controls" hidden>
+          <button id="trace-btn">Trace Roof with AI</button>
+          <span id="trace-hint" class="meta">Drag corners to adjust &bull; Click edge midpoint to add vertex &bull; Double-click vertex to remove</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
