@@ -148,13 +148,65 @@ export default function Dashboard({ appState, onAnalysisComplete, navigateTo, on
 
   if (!image) {
     return (
-      <div className="dashboard-empty">
-        <div className="empty-card">
-          <h2>Upload Photo to access dashboard</h2>
-          <p>Upload a photo of your home to get your solar compatibility analysis</p>
-          <button className="primary-button" onClick={onUploadClick}>
-            Upload Photo
-          </button>
+      <div className="dashboard">
+        <div className="dashboard-header">
+          <div className="insight skeleton-badge">Awaiting upload</div>
+        </div>
+
+        <div className="dashboard-grid">
+          <div className="dash-left">
+            <div className="dash-card preview-card">
+              <p className="section-label">Your image</p>
+              <div className="preview-frame skeleton-frame" onClick={onUploadClick}>
+                <div className="skeleton-upload-prompt">
+                  <span className="skeleton-plus">+</span>
+                  <span>Upload a roof photo</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="dash-card quick-actions">
+              <p className="section-label">Quick actions</p>
+              <button className="action-btn model-btn" disabled>View 3D Model</button>
+              <button className="action-btn summary-btn" disabled>View Summary</button>
+            </div>
+
+            <div className="dash-card">
+              <CashFlowChart />
+            </div>
+          </div>
+
+          <div className="dash-right">
+            <div className="dash-card">
+              <div className="progress-card">
+                <div className="progress-meta">
+                  <span>Solar compatibility</span>
+                  <strong>--%</strong>
+                </div>
+                <div className="sun-bar">
+                  <div className="sunlight" style={{ width: '0%' }} />
+                  <img src={sun} alt="Sun" className="sun-icon" style={{ left: '-22px' }} />
+                </div>
+              </div>
+
+              <div className="result-panel">
+                <p className="section-label">Solar score justification</p>
+                <div className="skeleton-lines">
+                  <div className="skeleton-line" />
+                  <div className="skeleton-line short" />
+                  <div className="skeleton-line" />
+                </div>
+              </div>
+
+              <div className="recommendations-section">
+                <p className="section-label">Recommended next steps</p>
+                <div className="skeleton-lines">
+                  <div className="skeleton-line" />
+                  <div className="skeleton-line short" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );

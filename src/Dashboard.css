@@ -1,4 +1,66 @@
-/* ── Empty state ──────────────────────────────────────────────────────── */
+/* ── Skeleton state ──────────────────────────────────────────────────── */
+
+.skeleton-badge {
+  background: rgba(148, 163, 184, 0.16) !important;
+  border-color: rgba(148, 163, 184, 0.32) !important;
+  color: #94a3b8 !important;
+}
+
+.skeleton-frame {
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.skeleton-frame:hover {
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.skeleton-upload-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.skeleton-plus {
+  font-size: 2.5rem;
+  font-weight: 300;
+  color: #475569;
+  line-height: 1;
+}
+
+.skeleton-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.skeleton-line {
+  height: 14px;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.12);
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ── Empty state (legacy) ────────────────────────────────────────────── */
 
 .dashboard-empty {
   display: flex;
@@ -329,9 +391,24 @@
 .cashflow-kpi-value.positive { color: #4ade80; }
 .cashflow-kpi-value.negative { color: #ef4444; }
 
+.cashflow-kpis {
+  display: flex;
+  gap: 10px;
+}
+
+.cashflow-chart-title {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
 .cashflow-canvas {
   width: 100%;
-  height: 260px;
+}
+
+.cashflow-bars {
+  margin-top: 16px;
 }
 
 .cashflow-sliders {
@@ -342,6 +419,10 @@
   border-radius: 14px;
   background: rgba(15, 23, 42, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cashflow-sliders.five-sliders {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .cashflow-slider input[type="range"] {
