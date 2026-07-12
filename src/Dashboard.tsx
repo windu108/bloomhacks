@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AppState, AnalysisResult } from './App';
+import CashFlowChart from './CashFlowChart';
 import sun from './assets/sun.png';
 import './Dashboard.css';
 
@@ -35,7 +36,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ appState, onAnalysisComplete, navigateTo, onUploadClick }: DashboardProps) {
-  const { image, address, electricBill } = appState;
+  const { image, address, electricBill, surfaceArea } = appState;
 
   const [reasoningText, setReasoningText] = useState<string>('');
   const [recommendationText, setRecommendationText] = useState<string>('');
@@ -44,6 +45,7 @@ export default function Dashboard({ appState, onAnalysisComplete, navigateTo, on
   const [contextValues, setContextValues] = useState<ContextValues>({
     address: address || null,
     monthly_electric_bill: electricBill || null,
+    surface_area: surfaceArea ? `${surfaceArea.toFixed(1)} m²` : null,
   });
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [scanProgress, setScanProgress] = useState<number>(0);
@@ -91,6 +93,10 @@ export default function Dashboard({ appState, onAnalysisComplete, navigateTo, on
         });
 
       const imageB64 = await toBase64(image);
+      const contextWithArea = {
+        ...contextValues,
+        surface_area: contextValues.surface_area || (surfaceArea ? `${surfaceArea.toFixed(1)} m²` : null),
+      };
       const res = await fetch('/api/describe-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,7 +105,7 @@ export default function Dashboard({ appState, onAnalysisComplete, navigateTo, on
           mime_type: image.type || 'image/jpeg',
           address: contextValues.address || address,
           monthly_electric_bill: contextValues.monthly_electric_bill || electricBill,
-          context_values: contextValues,
+          context_values: contextWithArea,
         }),
       });
 
@@ -206,6 +212,10 @@ export default function Dashboard({ appState, onAnalysisComplete, navigateTo, on
             <button className="action-btn summary-btn" onClick={() => navigateTo('summary')}>
               View Summary
             </button>
+          </div>
+
+          <div className="dash-card">
+            <CashFlowChart />
           </div>
         </div>
 

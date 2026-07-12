@@ -1,4 +1,5 @@
 import type { AppState } from './App';
+import CashFlowChart from './CashFlowChart';
 import './Summary.css';
 
 interface SummaryProps {
@@ -93,6 +94,11 @@ export default function Summary({ appState, navigateTo }: SummaryProps) {
         <div className="summary-card full-width">
           <h3>Recommended Next Steps</h3>
           <p className="summary-text">{nextSteps || 'No recommendations available.'}</p>
+        </div>
+
+        {/* Cash flow chart */}
+        <div className="summary-card full-width">
+          <CashFlowChart />
         </div>
 
         {/* Actions */}
