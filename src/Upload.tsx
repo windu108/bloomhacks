@@ -189,9 +189,6 @@ function Upload() {
         </div>
       </header>
 
-      <main style={{ padding: '20px' }}>
-        <SolarDashboard1 />
-      </main>
       <div className="container">
         <div className="insight">✨ Analysis complete</div>
 
@@ -213,7 +210,6 @@ function Upload() {
                 {showContextEditor ? "Hide values" : "Change Values"}
               </button>
 
-              {/* FIX: Context Editor now loads directly BELOW the button instead of the far right */}
               {showContextEditor && (
                 <div className="context-editor-card" style={{ marginTop: "1rem" }}>
                   <p className="section-label">Change values</p>
@@ -235,6 +231,13 @@ function Upload() {
                   </div>
                 </div>
               )}
+
+              <div className="finance-chart-card">
+                <p className="section-label">Financial outlook</p>
+                <div className="finance-chart-shell">
+                  <SolarDashboard1 />
+                </div>
+              </div>
             </div>
 
             {/* Analysis card container */}

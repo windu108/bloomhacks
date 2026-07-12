@@ -165,6 +165,25 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.finance-chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 22px;
+  background: rgba(30, 41, 59, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+}
+
+.finance-chart-shell {
+  width: 100%;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
 .context-toggle:hover,
 .regenerate-button:hover {
   transform: translateY(-1px);
