@@ -3,162 +3,267 @@ import {
   ComposedChart,
   Line,
   Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ReferenceLine,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Cell
 } from 'recharts';
 
-// --- FIXED MATH CONSTANTS FROM PYTHON PROTOTYPE ---
-const ANNUAL_POWER_USAGE_KWH = 10000;
-const SYSTEM_SIZE_KW = 8.3;
+// --- SYSTEM CONSTANTS ---
 const COST_PER_WATT = 2.80;
-const GROSS_SYSTEM_COST = SYSTEM_SIZE_KW * 1000 * COST_PER_WATT; // $23,240
-const UTILITY_INFLATION_RATE = 0.03;
 const PANEL_DEGRADATION_RATE = 0.005;
 const SIMULATION_YEARS = 25;
 const LOAN_TERM_YEARS = 20;
+const SOLAR_PRODUCTION_RATIO = 1.2; // 1 kW of panels produces ~1200 kWh/year
+const FEDERAL_ITC_RATE = 0.30; // 30% Tax Credit
 
-export default function SolarDashboard() {
-  // --- USER CONTROLS STATE ---
+// --- UTILITY FORMATTER ---
+const formatCurrency = (val) => `$${Number(val).toLocaleString()}`;
+
+// --- CUSTOM STYLED TOOLTIP (Moved outside to optimize performance) ---
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{ background: '#fff', padding: '12px', border: '1px solid #e0e0e0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+        <p style={{ margin: '0 0 8px 0', fontWeight: 'bold', borderBottom: '1px solid #eee', paddingBottom: '4px' }}>Year {label}</p>
+        {payload.map((entry, index) => (
+          <div key={index} style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', fontSize: '13px', margin: '4px 0', color: entry.color }}>
+            <span>{entry.name}:</span>
+            <span style={{ fontWeight: '600' }}>{formatCurrency(entry.value)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+// --- MAIN COMPONENT ---
+export default function SolarDashboard({ className = '', style = {} }) {
+  // --- THE "PERFECT 5" SLIDER STATES ---
   const [electricityPrice, setElectricityPrice] = useState(0.16);
   const [interestRate, setInterestRate] = useState(5.0);
+  const [monthlyBill, setMonthlyBill] = useState(150);
+  const [solarOffset, setSolarOffset] = useState(100); // % of bill covered
+  const [inflationRate, setInflationRate] = useState(4.0); // %
 
   // --- AMORTIZATION LOAN FORMULA ---
   const calculateMonthlyLoanPayment = (principal, annualRatePct, termMonths) => {
     const monthlyRate = (annualRatePct / 100) / 12;
     if (monthlyRate === 0) return principal / termMonths;
-    return (principal * (monthlyRate * Math.pow(1 + monthlyRate, termMonths))) / 
+    return (principal * (monthlyRate * Math.pow(1 + monthlyRate, termMonths))) /
            (Math.pow(1 + monthlyRate, termMonths) - 1);
   };
 
-  // --- RUN 25-YEAR CASH FLOW SIMULATION SIMULTANEOUSLY ON SLIDER CHANGE ---
+  // --- RUN 25-YEAR CASH FLOW SIMULATION ---
   const chartData = useMemo(() => {
-    const isFinanced = interestRate > 0;
-    const monthlyPayment = calculateMonthlyLoanPayment(GROSS_SYSTEM_COST, interestRate, LOAN_TERM_YEARS * 12);
-    const annualLoanPayment = monthlyPayment * 12;
-    const startingBalance = isFinanced ? 0 : -GROSS_SYSTEM_COST;
+    // 1. Calculate dynamic system size based on user's bill and offset
+    const annualUsageKwh = (monthlyBill / electricityPrice) * 12;
+    const targetSolarProduction = annualUsageKwh * (solarOffset / 100);
+    const systemSizeKw = targetSolarProduction / (1000 * SOLAR_PRODUCTION_RATIO);
+    
+    // 2. Calculate Costs (Assuming 30% ITC is applied to lower loan principal for simplicity)
+    const grossSystemCost = systemSizeKw * 1000 * COST_PER_WATT;
+    const netSystemCost = grossSystemCost * (1 - FEDERAL_ITC_RATE);
 
-    const data = [{ year: 0, balance: startingBalance, profit: Math.max(0, startingBalance), loss: Math.min(0, startingBalance) }];
+    const isFinanced = interestRate > 0;
+    const monthlyPayment = calculateMonthlyLoanPayment(netSystemCost, interestRate, LOAN_TERM_YEARS * 12);
+    const annualLoanPayment = monthlyPayment * 12;
+    const startingBalance = isFinanced ? 0 : -netSystemCost;
+
+    const data = [];
     let runningTotal = startingBalance;
 
     for (let year = 1; year <= SIMULATION_YEARS; year++) {
-      const degradedOutputFactor = Math.pow(1 - PANEL_DEGRADATION_RATE, year - 1);
-      const inflatedPrice = electricityPrice * Math.pow(1 + UTILITY_INFLATION_RATE, year - 1);
-      const annualSavings = ANNUAL_POWER_USAGE_KWH * degradedOutputFactor * inflatedPrice;
+      // Degrade solar production over time
+      const degradedProduction = targetSolarProduction * Math.pow(1 - PANEL_DEGRADATION_RATE, year - 1);
+      
+      // Calculate utility costs with compounded inflation
+      const inflatedPrice = electricityPrice * Math.pow(1 + (inflationRate / 100), year - 1);
+      
+      // Annual savings = What they would have paid minus what they still buy from utility
+      const utilityCostWithoutSolar = annualUsageKwh * inflatedPrice;
+      const utilityCostWithSolar = Math.max(0, (annualUsageKwh - degradedProduction)) * inflatedPrice;
+      const annualSavings = utilityCostWithoutSolar - utilityCostWithSolar;
 
       const loanPaymentThisYear = (isFinanced && year <= LOAN_TERM_YEARS) ? annualLoanPayment : 0;
-      runningTotal += (annualSavings - loanPaymentThisYear);
+      
+      // The net cash flow for this specific year
+      const netAnnualCashFlow = annualSavings - loanPaymentThisYear;
+      runningTotal += netAnnualCashFlow;
 
       data.push({
         year,
+        annualCashFlow: Math.round(netAnnualCashFlow),
         balance: Math.round(runningTotal),
-        profit: runningTotal >= 0 ? Math.round(runningTotal) : 0,
-        loss: runningTotal < 0 ? Math.round(runningTotal) : 0,
+        profitZone: runningTotal >= 0 ? Math.round(runningTotal) : 0,
+        lossZone: runningTotal < 0 ? Math.round(runningTotal) : 0,
       });
     }
     return data;
-  }, [electricityPrice, interestRate]);
+  }, [electricityPrice, interestRate, monthlyBill, solarOffset, inflationRate]);
 
   const netSavings = chartData[chartData.length - 1].balance;
-  const formatCurrency = (val) => `$${Number(val).toLocaleString()}`;
+  const breakEvenYear = chartData.find(d => d.balance >= 0)?.year || null;
 
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: '24px', maxWidth: '100%', background: '#fff', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+    <div 
+      className={className} 
+      style={{ 
+        fontFamily: 'sans-serif', 
+        padding: '24px', 
+        width: '100%', 
+        background: '#fff', 
+        borderRadius: '8px', 
+        boxShadow: '0 4px 12px rgba(0,0,0,0.08)', 
+        boxSizing: 'border-box',
+        ...style 
+      }}
+    >
       
-      {/* KPI Stats Block */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+      {/* Header & KPI Stats */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h3 style={{ margin: 0, color: '#222', fontSize: '20px', fontWeight: '700' }}>25-Year Solar Cash Flow</h3>
-          <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '14px', fontStyle: 'italic' }}>
-            {interestRate > 0 ? `Financed: ${interestRate}% / 20-yr loan` : 'Cash Purchase'}
+          <h2 style={{ margin: 0, color: '#111', fontSize: '24px', fontWeight: '800' }}>Solar Financial Model</h2>
+          <p style={{ margin: '4px 0 0 0', color: '#666', fontSize: '14px' }}>
+            Includes 30% Federal ITC • 25-Year Projection
           </p>
         </div>
-        <div style={{ background: '#f9f9f9', padding: '10px 16px', borderRadius: '6px', border: '1px solid #eee' }}>
-          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#777', display: 'block', letterSpacing: '0.5px' }}>NET 25-YEAR SAVINGS</span>
-          <span style={{ fontSize: '22px', fontWeight: 'bold', color: netSavings >= 0 ? '#2E7D32' : '#C62828' }}>
-            {formatCurrency(netSavings)}
-          </span>
-        </div>
-      </div>
-
-      {/* Chart Canvas */}
-      <div style={{ width: '100%', height: '320px', marginBottom: '24px' }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-            <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-            <YAxis tickFormatter={formatCurrency} tick={{ fontSize: 11 }} width={65} />
-            <Tooltip formatter={(value) => formatCurrency(value)} labelFormatter={(year) => `Year ${year}`} />
-            <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '13px' }} />
-            
-            {/* Conditional Area Shading */}
-            <Area 
-              type="monotone" 
-              dataKey="profit" 
-              fill="#4CAF50" 
-              stroke="none" 
-              fillOpacity={0.15} 
-              name="Profit Zone" 
-            />
-            <Area 
-              type="monotone" 
-              dataKey="loss" 
-              fill="#C62828" 
-              stroke="none" 
-              fillOpacity={0.1} 
-              name="Payback Zone" 
-            />
-            
-            {/* Zero-Line Break-Even Reference */}
-            <ReferenceLine y={0} stroke="#C62828" strokeDasharray="4 4" />
-            
-            {/* Cumulative Cash Flow Trend Line */}
-            <Line 
-              type="monotone" 
-              dataKey="balance" 
-              stroke="#2E7D32" 
-              strokeWidth={3} 
-              dot={false} 
-              name="Cumulative Balance" 
-              activeDot={{ r: 5 }} 
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Control Sliders Panel */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', background: '#fafafa', padding: '16px', borderRadius: '8px', border: '1px solid #f0f0f0' }}>
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#1B5E20' }}>
-            <label>Electricity Price</label>
-            <span>${electricityPrice.toFixed(2)} / kWh</span>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {breakEvenYear ? (
+            <div style={{ background: '#E3F2FD', padding: '10px 16px', borderRadius: '6px', border: '1px solid #BBDEFB' }}>
+              <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#1565C0', display: 'block' }}>BREAK-EVEN</span>
+              <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#0D47A1' }}>Year {breakEvenYear}</span>
+            </div>
+          ) : (
+            <div style={{ background: '#FFF3E0', padding: '10px 16px', borderRadius: '6px', border: '1px solid #FFE0B2' }}>
+              <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#E65100', display: 'block' }}>BREAK-EVEN</span>
+              <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#E65100', lineHeight: '28px' }}>&gt; 25 Years</span>
+            </div>
+          )}
+          <div style={{ background: netSavings >= 0 ? '#E8F5E9' : '#FFEBEE', padding: '10px 16px', borderRadius: '6px', border: `1px solid ${netSavings >= 0 ? '#C8E6C9' : '#FFCDD2'}` }}>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: netSavings >= 0 ? '#2E7D32' : '#C62828', display: 'block' }}>
+              {netSavings >= 0 ? 'NET 25-YR SAVINGS' : 'NET 25-YR LOSS'}
+            </span>
+            <span style={{ fontSize: '20px', fontWeight: 'bold', color: netSavings >= 0 ? '#1B5E20' : '#B71C1C' }}>
+              {netSavings < 0 ? '-' : ''}{formatCurrency(Math.abs(netSavings))}
+            </span>
           </div>
-          <input 
-            type="range" min="0.05" max="0.50" step="0.01" 
-            value={electricityPrice} 
-            onChange={(e) => setElectricityPrice(parseFloat(e.target.value))}
-            style={{ width: '100%', accentColor: '#1B5E20', cursor: 'pointer' }}
-          />
+        </div>
+      </div>
+
+      {/* Main Graphs Layout */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '32px' }}>
+        
+        {/* Graph 1: Macro Cumulative Wealth */}
+        <div style={{ width: '100%', height: '280px' }}>
+          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#555', fontWeight: '600' }}>Cumulative Wealth (Total Savings vs Expenses)</h4>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#4CAF50" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#4CAF50" stopOpacity={0.0}/>
+                </linearGradient>
+                <linearGradient id="colorLoss" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#C62828" stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor="#C62828" stopOpacity={0.0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+              <YAxis tickFormatter={(val) => `$${val/1000}k`} tick={{ fontSize: 11 }} width={55} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '12px' }} />
+              
+              <Area type="monotone" dataKey="profitZone" fill="url(#colorProfit)" stroke="none" name="Profit Zone" />
+              <Area type="monotone" dataKey="lossZone" fill="url(#colorLoss)" stroke="none" name="Payback Zone" />
+              
+              <ReferenceLine y={0} stroke="#9E9E9E" />
+              {breakEvenYear && (
+                <ReferenceLine x={breakEvenYear} stroke="#2E7D32" strokeDasharray="3 3" label={{ value: 'Break-Even', fill: '#2E7D32', position: 'top', fontSize: 11 }} />
+              )}
+              
+              <Line type="monotone" dataKey="balance" stroke="#2E7D32" strokeWidth={3} dot={false} name="Cumulative Balance" activeDot={{ r: 6 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
         </div>
 
+        {/* Graph 2: Micro Annual Cash Flow */}
+        <div style={{ width: '100%', height: '180px' }}>
+          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#555', fontWeight: '600' }}>Annual Cash Flow (Year-by-Year Net Profit)</h4>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
+              <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+              <YAxis tickFormatter={(val) => `$${val}`} tick={{ fontSize: 11 }} width={55} />
+              <Tooltip content={<CustomTooltip />} cursor={{fill: '#f5f5f5'}} />
+              <ReferenceLine y={0} stroke="#9E9E9E" />
+              <Bar dataKey="annualCashFlow" name="Net Cash Flow" radius={[2, 2, 0, 0]}>
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.annualCashFlow >= 0 ? '#66BB6A' : '#EF5350'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* The "Perfect 5" Sliders Panel */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', background: '#fafafa', padding: '20px', borderRadius: '8px', border: '1px solid #eee' }}>
+        
+        {/* 1. Monthly Bill */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#B71C1C' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', fontWeight: '600' }}>
+            <label>Current Monthly Bill</label>
+            <span>${monthlyBill}</span>
+          </div>
+          <input type="range" min="50" max="500" step="10" value={monthlyBill} onChange={(e) => setMonthlyBill(Number(e.target.value))} style={{ width: '100%', cursor: 'pointer' }} />
+        </div>
+
+        {/* 2. Electricity Price */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', fontWeight: '600' }}>
+            <label>Utility Price / kWh</label>
+            <span>${electricityPrice.toFixed(2)}</span>
+          </div>
+          <input type="range" min="0.05" max="0.50" step="0.01" value={electricityPrice} onChange={(e) => setElectricityPrice(Number(e.target.value))} style={{ width: '100%', cursor: 'pointer' }} />
+        </div>
+
+        {/* 3. Solar Offset */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', fontWeight: '600' }}>
+            <label>Solar Offset</label>
+            <span>{solarOffset}%</span>
+          </div>
+          <input type="range" min="50" max="120" step="5" value={solarOffset} onChange={(e) => setSolarOffset(Number(e.target.value))} style={{ width: '100%', cursor: 'pointer' }} />
+        </div>
+
+        {/* 4. Utility Inflation */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', fontWeight: '600' }}>
+            <label>Utility Inflation</label>
+            <span>{inflationRate.toFixed(1)}%</span>
+          </div>
+          <input type="range" min="1.0" max="10.0" step="0.5" value={inflationRate} onChange={(e) => setInflationRate(Number(e.target.value))} style={{ width: '100%', cursor: 'pointer' }} />
+        </div>
+
+        {/* 5. Loan Interest Rate */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', fontWeight: '600' }}>
             <label>Loan Interest Rate</label>
             <span>{interestRate.toFixed(1)}%</span>
           </div>
-          <input 
-            type="range" min="0.0" max="15.0" step="0.1" 
-            value={interestRate} 
-            onChange={(e) => setInterestRate(parseFloat(e.target.value))}
-            style={{ width: '100%', accentColor: '#B71C1C', cursor: 'pointer' }}
-          />
+          <input type="range" min="0.0" max="12.0" step="0.1" value={interestRate} onChange={(e) => setInterestRate(Number(e.target.value))} style={{ width: '100%', cursor: 'pointer' }} />
         </div>
-      </div>
 
+      </div>
     </div>
   );
 }

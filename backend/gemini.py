@@ -177,6 +177,7 @@ def evaluate_and_split_solar_data(ai_summary: str) -> tuple[int, str]:
        - The Space Deficit (High Bill + Tiny Roof): If a homeowner has a high electric bill (over $200) but a small roof surface area (under 400 sq ft), the score MUST be capped below 55. You must realize that a high bill requires a massive solar system. If they only have 280 sq ft, they physically cannot fit enough panels to offset a bill that large. Do NOT let a high bill inflate the score if they don't have the space to install panels!
        - Roof Age & Condition: If the roof is 'Weathered', 'Aged', or 'Needs Repair', cap the score below 50. Advise fixing the roof first because detaching and reinstalling panels later costs thousands.
        - Tiny Electric Bill: If their monthly bill is exceptionally low (under $50), cap the score below 50. Upfront equipment costs will take decades to break even.
+       - If they would safe money by the power predicted from solar panels over their energy usage that is a massive boost to score and it should be high, if not it should be low
 
     2. EFFICIENCY DRIVERS (Weight: Medium-High):
        - Heavy Shade / Obstructions: Large trees or massive building shadows that block major parts of the roof drastically lower system efficiency.
@@ -269,7 +270,7 @@ def generate_next_steps_for_solar_context(ai_summary: str, compatibility_score: 
 
     client = genai.Client(api_key=api_key)
 
-    if compatibility_score >= 80:
+    if compatibility_score >= 60:
         prompt = f"""
         You are a helpful solar concierge.
 
@@ -279,12 +280,23 @@ def generate_next_steps_for_solar_context(ai_summary: str, compatibility_score: 
         COMPATIBILITY SCORE: {compatibility_score}/100
 
         The homeowner looks like a strong solar candidate. Give them practical next steps that include:
-        1. A short list of local contractor options they can contact for installation.
-        2. Local solar incentives or rebates that may apply based on their address.
-        3. Solar financing opportunities, especially mentioning OneEthos as a financing option when appropriate.
-        4. A warm, encouraging tone and clear next steps.
 
-        Return the answer as plain English bullet points.
+
+        List specific solar incentives, tax credits, or utility rebates that apply to the homeowner's address.
+     [CRITICAL RULE]: If there are absolutely no local incentives available for this address, state clearly: "There are currently no specific local solar incentives or rebates available for your immediate area." Do not leave this blank.
+
+       ontact Local Solar Contractors
+         Provide a list of multiple reputable, real local solar installation companies that service this specific address.
+        For each contractor, format it strictly as: **[Contractor Name]** | Website: [URL] | Phone: [Phone Number]
+
+        Step 3: Explore Solar Financing Options
+        Explain available solar financing opportunities (e.g., solar loans, PPAs, or leases).
+        You must explicitly feature **OneEthos** as a primary and best financing option. DO NOT LIST ANY OTHERS
+        Include their website: **OneEthos** | Website: https://www.oneethos.com (or the specific URL you prefer).
+
+        TONE: Warm, encouraging, professional, and clear. GET RIGHT TO THE POINT. Avoid generic filler text. Focus on actionable, specific guidance. Start off with Solar Incentives: 
+
+        DO NOT use formatting codes like ** in your response. Return the answer as plain English bullet points. Before each section title you can have a line of _________ and some indents
         """
     else:
         prompt = f"""
@@ -301,7 +313,7 @@ def generate_next_steps_for_solar_context(ai_summary: str, compatibility_score: 
         3. Replacing old appliances with efficient models.
         4. Reducing HVAC usage.
 
-        Return the answer as plain English bullet points.
+        Return the answer as plain English, make it super easy to under stand and brief bullet points. Give current articlles or links to resources for each recommendation. DO NOT use formatting codes like ** in your response. Return the answer as plain English bullet points. Each section you can have a line of _________ and some indents
         """
 
     response = client.models.generate_content(
