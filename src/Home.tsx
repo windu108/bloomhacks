@@ -127,7 +127,7 @@ function Home() {
             />
           </label>
           <label className="field">
-            <span>Address (optional)</span>
+            <span>Property address</span>
             <input
               type="text"
               value={address}
@@ -143,7 +143,7 @@ function Home() {
       </div>
 
       <div className="solar-planner-section">
-        <SolarPlanner />
+        <SolarPlanner initialAddress={address} autoLoad={false} showAddressInput={false} />
       </div>
     </div>
   );

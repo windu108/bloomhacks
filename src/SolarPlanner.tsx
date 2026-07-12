@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import SolarViewer, { getViewerControls } from './SolarViewer';
 import './SolarPlanner.css';
 
@@ -29,8 +29,14 @@ async function readJsonResponse<T>(res: Response): Promise<T> {
   }
 }
 
-export default function SolarPlanner() {
-  const [address, setAddress] = useState('');
+interface SolarPlannerProps {
+  initialAddress?: string;
+  autoLoad?: boolean;
+  showAddressInput?: boolean;
+}
+
+export default function SolarPlanner({ initialAddress = '', autoLoad = false, showAddressInput = true }: SolarPlannerProps) {
+  const [address, setAddress] = useState(initialAddress);
   const [status, setStatus] = useState('');
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -46,14 +52,26 @@ export default function SolarPlanner() {
 
   const viewerRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    setAddress(initialAddress);
+  }, [initialAddress]);
+
+  useEffect(() => {
+    if (autoLoad && initialAddress.trim()) {
+      void handleSubmit(undefined, initialAddress);
+    }
+  }, [autoLoad, initialAddress]);
+
   function showStatus(msg: string, err = false) {
     setStatus(msg);
     setIsError(err);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!address.trim()) return;
+  async function handleSubmit(e?: FormEvent | null, submittedAddress?: string) {
+    const resolvedAddress = (submittedAddress ?? address).trim();
+    if (!resolvedAddress) return;
+    setAddress(resolvedAddress);
+    e?.preventDefault();
     setLoading(true);
     setGeo(null);
     setSatImgUrl(null);
@@ -65,7 +83,7 @@ export default function SolarPlanner() {
     try {
       // Geocode
       showStatus('Looking up address...');
-      const geoRes = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`);
+      const geoRes = await fetch(`/api/geocode?address=${encodeURIComponent(resolvedAddress)}`);
       const geoData = await readJsonResponse<{ lat: number; lon: number; formattedAddress: string }>(geoRes);
       if (!geoRes.ok) throw new Error((geoData as { error?: string }).error || 'Geocoding failed');
       setGeo(geoData);
@@ -130,26 +148,30 @@ export default function SolarPlanner() {
 
   return (
     <div className="solar-planner">
-      <header>
-        <h1>Solar Roof Planner</h1>
-        <p>Enter your address to get started</p>
-      </header>
-
       <section className="address-section">
-        <form onSubmit={handleSubmit} className="address-form">
-          <input
-            type="text"
-            value={address}
-            onChange={e => setAddress(e.target.value)}
-            placeholder="123 Main St, Springfield, IL"
-            autoComplete="street-address"
-            required
-            className="address-input"
-          />
-          <button type="submit" disabled={loading} className="go-btn">
-            {loading ? '...' : 'Go'}
-          </button>
-        </form>
+        {showAddressInput ? (
+          <form onSubmit={(e) => { void handleSubmit(e); }} className="address-form">
+            <input
+              type="text"
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              placeholder="123 Main St, Springfield, IL"
+              autoComplete="street-address"
+              required
+              className="address-input"
+            />
+            <button type="submit" disabled={loading} className="go-btn">
+              {loading ? '...' : 'Go'}
+            </button>
+          </form>
+        ) : (
+          <div className="address-actions">
+            <p>Using the address above to load the roof map.</p>
+            <button type="button" onClick={() => { void handleSubmit(undefined, address); }} disabled={loading} className="go-btn">
+              {loading ? '...' : 'Load roof map'}
+            </button>
+          </div>
+        )}
         {status && <div className={`status ${isError ? 'error' : ''}`}>{status}</div>}
       </section>
 

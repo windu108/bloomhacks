@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import sun from "./assets/sun.png";
+import SolarPlanner from "./SolarPlanner";
 import "./Upload.css";
 import "./index.css";
 
@@ -184,7 +185,10 @@ function Upload() {
     analyzeImage();
   }, [image]);
 
-  const contextFields = useMemo(() => Object.keys(contextFieldLabels) as Array<keyof ContextValues>, []);
+  const contextFields = useMemo(
+    () => (Object.keys(contextFieldLabels).filter((field) => field !== "address") as Array<keyof ContextValues>),
+    []
+  );
 
   const updateContextField = (field: keyof ContextValues, value: string) => {
     setContextValues((current) => ({ ...current, [field]: value }));
@@ -288,6 +292,12 @@ function Upload() {
           </div>
         ) : (
           <p className="empty-state">No image was uploaded.</p>
+        )}
+
+        {image && (
+          <div style={{ marginTop: "2rem" }}>
+            <SolarPlanner initialAddress={address} autoLoad={Boolean(address)} showAddressInput={false} />
+          </div>
         )}
 
         {image && solarSavings ? (
