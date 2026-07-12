@@ -1,0 +1,204 @@
+.solar-planner {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  color: #e8eaf0;
+}
+
+.solar-planner header h1 {
+  font-size: 2rem;
+  color: #f9c846;
+}
+
+.solar-planner header p {
+  color: #8a8fa8;
+  margin-top: 0.25rem;
+}
+
+.address-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.address-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 1px solid #2e3147;
+  border-radius: 6px;
+  background: #1a1d2e;
+  color: #e8eaf0;
+  font-size: 1rem;
+}
+
+.address-input:focus {
+  outline: none;
+  border-color: #f9c846;
+}
+
+.go-btn {
+  padding: 0.75rem 1.5rem;
+  background: #f9c846;
+  color: #0f1117;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.go-btn:hover { opacity: 0.85; }
+.go-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.status {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: #8a8fa8;
+}
+
+.status.error { color: #f87171; }
+
+.result-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.geocode-result {
+  font-size: 0.95rem;
+  color: #8a8fa8;
+}
+
+.satellite-section h2,
+.viewer-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+  color: #f9c846;
+}
+
+.image-container {
+  border: 1px solid #2e3147;
+  border-radius: 6px;
+  overflow: hidden;
+  width: fit-content;
+}
+
+.image-container img {
+  display: block;
+}
+
+.compass-label {
+  font-size: 0.7rem;
+  color: #8a8fa8;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.three-container {
+  width: 640px;
+  height: 480px;
+  border: 1px solid #2e3147;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #1a1d2e;
+}
+
+.three-container canvas {
+  display: block;
+}
+
+.panel-controls {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.solar-stats-bar {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.solar-stat {
+  font-size: 0.85rem;
+  color: #8a8fa8;
+}
+
+.solar-stat strong {
+  color: #e8eaf0;
+}
+
+.panel-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.panel-buttons button {
+  padding: 0.55rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.panel-buttons button:hover { opacity: 0.8; }
+
+.recommended-btn {
+  background: #4ade80;
+  color: #0f1117;
+  border: none;
+}
+
+.recommended-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.fill-btn {
+  background: transparent;
+  color: #f9c846;
+  border: 1px solid #f9c846;
+}
+
+.clear-btn {
+  background: transparent;
+  color: #8a8fa8;
+  border: 1px solid #2e3147;
+}
+
+.panel-stats {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.95rem;
+  color: #e8eaf0;
+}
+
+.kwh-estimate {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.ai-reasoning {
+  padding: 1rem;
+  background: #1a1d2e;
+  border: 1px solid #2e3147;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #c0c4d4;
+}
+
+.ai-summary {
+  color: #e8eaf0;
+}
+
+.meta {
+  font-size: 0.75rem;
+  color: #4a4f6a;
+  font-family: monospace;
+}
