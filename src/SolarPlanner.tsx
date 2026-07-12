@@ -15,6 +15,20 @@ interface SolarData {
   buildingBbox: any;
 }
 
+async function readJsonResponse<T>(res: Response): Promise<T> {
+  const text = await res.text();
+
+  if (!text) {
+    throw new Error('The server returned an empty response.');
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error('The server returned an invalid JSON response.');
+  }
+}
+
 export default function SolarPlanner() {
   const [address, setAddress] = useState('');
   const [status, setStatus] = useState('');
@@ -52,8 +66,8 @@ export default function SolarPlanner() {
       // Geocode
       showStatus('Looking up address...');
       const geoRes = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`);
-      const geoData = await geoRes.json();
-      if (!geoRes.ok) throw new Error(geoData.error || 'Geocoding failed');
+      const geoData = await readJsonResponse<{ lat: number; lon: number; formattedAddress: string }>(geoRes);
+      if (!geoRes.ok) throw new Error((geoData as { error?: string }).error || 'Geocoding failed');
       setGeo(geoData);
 
       // Load satellite + solar in parallel
@@ -62,8 +76,8 @@ export default function SolarPlanner() {
       setSatImgUrl(satUrl);
 
       const solarRes = await fetch(`/api/solar?lat=${geoData.lat}&lon=${geoData.lon}`);
-      const solar = await solarRes.json();
-      if (!solarRes.ok) throw new Error(solar.error || 'Solar fetch failed');
+      const solar = await readJsonResponse<SolarData>(solarRes);
+      if (!solarRes.ok) throw new Error((solar as { error?: string }).error || 'Solar fetch failed');
 
       setSolarData(solar);
       showStatus('');
@@ -94,9 +108,9 @@ export default function SolarPlanner() {
           stats: solarData.stats,
         }),
       });
-      const data = await res.json();
+      const data = await readJsonResponse<{ reasoning?: string; error?: string }>(res);
       if (!res.ok) throw new Error(data.error || 'Recommendation failed');
-      setReasoning(data.reasoning);
+      setReasoning(data.reasoning || 'No recommendation returned.');
     } catch (err: any) {
       setReasoning(`Recommendation failed: ${err.message}`);
     } finally {

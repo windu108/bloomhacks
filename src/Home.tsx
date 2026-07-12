@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent, type DragEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import sun from "./assets/sun.png";
+import SolarPlanner from "./SolarPlanner";
 import "./Home.css";
 
 function Home() {
@@ -139,6 +140,10 @@ function Home() {
         <button className="primary-button" onClick={handleContinue}>
           Continue
         </button>
+      </div>
+
+      <div className="solar-planner-section">
+        <SolarPlanner />
       </div>
     </div>
   );

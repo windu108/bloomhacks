@@ -45,6 +45,23 @@ interface SolarViewerProps {
   onRecommend?: () => void;
 }
 
+interface ViewerSceneState {
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  renderer: THREE.WebGLRenderer;
+  controls: OrbitControls;
+  animId: number;
+  slotMeshes: THREE.Mesh[];
+  placedSet: Set<number>;
+  placedMeshes: Map<number, THREE.Mesh>;
+  ghostMesh: THREE.Mesh | null;
+  hoveredIdx: number | null;
+  dragSourceIdx: number | null;
+  pointerDownPos: { x: number; y: number } | null;
+  roofHeightFn: ((x: number, z: number, seg?: Segment) => number) | null;
+  currentRoofOutline: Point2D[] | null;
+}
+
 // ── Constants ───────────────────────────────────────────────────────────────
 
 const WALL_H = 2.5;
@@ -288,22 +305,7 @@ function fanTriangulate(poly: Point2D[], heightFn: (x: number, z: number) => num
 
 export default function SolarViewer({ lat, lon, solarData, onStatsChange }: SolarViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<{
-    scene: THREE.Scene;
-    camera: THREE.PerspectiveCamera;
-    renderer: THREE.WebGLRenderer;
-    controls: OrbitControls;
-    animId: number;
-    slotMeshes: THREE.Mesh[];
-    placedSet: Set<number>;
-    placedMeshes: Map<number, THREE.Mesh>;
-    ghostMesh: THREE.Mesh | null;
-    hoveredIdx: number | null;
-    dragSourceIdx: number | null;
-    pointerDownPos: { x: number; y: number } | null;
-    roofHeightFn: ((x: number, z: number, seg?: Segment) => number) | null;
-    currentRoofOutline: Point2D[] | null;
-  } | null>(null);
+  const sceneRef = useRef<ViewerSceneState | null>(null);
 
   const MAT_PLACED = useRef(new THREE.MeshLambertMaterial({ color: 0x1a3a5c, transparent: true, opacity: 0.92, depthWrite: false, side: THREE.DoubleSide }));
   const MAT_GHOST = useRef(new THREE.MeshLambertMaterial({ color: 0xf9c846, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide }));
@@ -339,7 +341,17 @@ export default function SolarViewer({ lat, lon, solarData, onStatsChange }: Sola
     } else {
       s.placedSet.delete(idx);
       const m = s.placedMeshes.get(idx);
-      if (m) { m.geometry.dispose(); m.material.dispose(); s.scene.remove(m); s.placedMeshes.delete(idx); }
+      if (m) {
+        m.geometry.dispose();
+        const material = m.material;
+        if (Array.isArray(material)) {
+          material.forEach((mat) => mat.dispose());
+        } else {
+          material.dispose();
+        }
+        s.scene.remove(m);
+        s.placedMeshes.delete(idx);
+      }
     }
   }, []);
 
@@ -594,7 +606,7 @@ export default function SolarViewer({ lat, lon, solarData, onStatsChange }: Sola
     let dragSourceIdx: number | null = null;
     let pointerDownPos: { x: number; y: number } | null = null;
 
-    const state = {
+    const state: ViewerSceneState = {
       scene, camera, renderer, controls,
       animId: 0,
       slotMeshes, placedSet, placedMeshes,

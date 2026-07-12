@@ -190,11 +190,6 @@ function Upload() {
     setContextValues((current) => ({ ...current, [field]: value }));
   };
 
-  const populatedContextPreview = contextFields.filter((field) => {
-    const value = contextValues[field];
-    return typeof value === "string" && value.trim().length > 0;
-  });
-
   const formatCurrency = (value?: number | null) => {
     if (typeof value !== "number" || Number.isNaN(value)) return "—";
     return `$${value.toFixed(2)}`;
