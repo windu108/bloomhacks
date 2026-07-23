@@ -2,7 +2,12 @@
 
 An AI-powered solar installation analysis tool that evaluates residential properties for solar compatibility using satellite imagery, Google Solar API, and Gemini AI vision analysis.
 
-**Built by Ethan**
+**Built by 
+Ethan
+Akshay
+Bill
+Gabe
+During Bloom Hacks**
 
 ---
 
