@@ -94,13 +94,29 @@ def describe_image():
 
     # 6. AI Execution: Pass the raw bytes to your custom Gemini function.
     # The code will pause on this line and wait for Google's servers to respond.
-    analysis_payload = describe_image_bytes(
-        image_bytes,
-        mime_type=mime_type,
-        address=address,
-        monthly_electric_bill=monthly_electric_bill,
-        context_values=context_values,
-    )
+    try:
+        analysis_payload = describe_image_bytes(
+            image_bytes,
+            mime_type=mime_type,
+            address=address,
+            monthly_electric_bill=monthly_electric_bill,
+            context_values=context_values,
+        )
+    except Exception as e:
+        error_msg = str(e)
+        if "RESOURCE_EXHAUSTED" in error_msg or "quota" in error_msg.lower():
+            return jsonify({
+                "error": "Gemini API quota exceeded. The free tier has run out of requests for today. Please wait for the quota to reset or enable billing on your Gemini API key.",
+                "description": "",
+                "analysis": {"roof_material": None, "roof_quality": None, "roof_tilting": None, "obstructions": []},
+                "summary": "",
+                "estimated_energy_price": 0.0,
+                "evaluation": {"score": 0, "reasoning": "AI analysis unavailable due to API quota limits."},
+                "next_steps": "",
+                "context_values": {},
+                "context": solar_context.get_full_context(),
+            }), 429
+        return jsonify({"error": f"Gemini API error: {error_msg}"}), 500
 
     # 7. Parse the image-analysis JSON and save it into the solar context.
     if isinstance(analysis_payload, dict):
@@ -128,7 +144,10 @@ def describe_image():
     solar_context.set_value("ai_image_analysis", analysis)
 
     # 8. Ask Gemini for the likely current electricity price for the provided address.
-    estimated_energy_price = get_estimated_energy_price(address)
+    try:
+        estimated_energy_price = get_estimated_energy_price(address)
+    except Exception:
+        estimated_energy_price = 0.0
     solar_context.set_value("energy_price", {"estimated_price": estimated_energy_price})
     print("=== ENERGY PRICE DEBUG ===")
     print(estimated_energy_price)
@@ -139,13 +158,23 @@ def describe_image():
     print(ai_summary)
 
     # 10. Ask Gemini to evaluate the full solar context and return the score/reasoning.
-    score, reasoning = evaluate_and_split_solar_data(ai_summary)
+    try:
+        score, reasoning = evaluate_and_split_solar_data(ai_summary)
+    except Exception as e:
+        error_msg = str(e)
+        if "RESOURCE_EXHAUSTED" in error_msg or "quota" in error_msg.lower():
+            score, reasoning = 0, "AI evaluation unavailable due to Gemini API quota limits. Please try again later or enable billing on your API key."
+        else:
+            score, reasoning = 0, f"AI evaluation error: {error_msg}"
     solar_context.set_value("compatibility_score", {"score": score})
     print(f"=== COMPATIBILITY SCORE DEBUG ===")
     print(f"score={score}")
     print(f"reasoning={reasoning}")
 
-    next_steps = generate_next_steps_for_solar_context(ai_summary, score)
+    try:
+        next_steps = generate_next_steps_for_solar_context(ai_summary, score)
+    except Exception:
+        next_steps = ""
     print("=== NEXT STEPS DEBUG ===")
     print(next_steps)
 
@@ -174,7 +203,7 @@ def describe_image():
 if __name__ == "__main__":
     # Check if the computer set a specific PORT environment variable. 
     # If not, default to 5001.
-    port = int(os.environ.get("PORT", "5001"))
+    port = int(os.environ.get("FLASK_PORT", "5001"))
     
     # Start the server! 
     # host="0.0.0.0" means "listen on all network interfaces" (so devices on your local Wi-Fi could reach it).

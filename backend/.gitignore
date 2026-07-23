@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+**/venv/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+**/.*env
+server/.env
+
+# Python
+**/__pycache__/
+*.pyc
+
+# Claude
+.claude/
+
+# OS
+.DS_Store

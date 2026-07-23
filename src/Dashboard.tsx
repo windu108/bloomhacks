@@ -109,7 +109,14 @@ export default function Dashboard({ appState, onAnalysisComplete, navigateTo, on
         }),
       });
 
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        let errMsg = 'Analysis request failed.';
+        try {
+          const errJson = await res.json();
+          errMsg = errJson.error || errMsg;
+        } catch { /* ignore parse errors */ }
+        throw new Error(errMsg);
+      }
 
       const json = await res.json();
       const reasoning = typeof json.evaluation?.reasoning === 'string' ? json.evaluation.reasoning.trim() : '';
@@ -128,8 +135,9 @@ export default function Dashboard({ appState, onAnalysisComplete, navigateTo, on
         nextSteps,
         contextValues: json.context_values || {},
       });
-    } catch {
-      setReasoningText('We could not refresh the analysis right now.');
+    } catch (err: any) {
+      setReasoningText(err.message || 'We could not refresh the analysis right now.');
+      setRecommendationText('');
     } finally {
       setIsRegenerating(false);
     }
